@@ -9,7 +9,8 @@
 
 - **專案路徑**: `c:\Users\pkboi\OneDrive\文件\大學\大二下\軟體設計與實驗\chatroom`
 - **學號**: 113062330
-- **技術棧**: React (Vite) + Firebase (Auth, Firestore, Storage) + Vanilla CSS
+- **技術棧**: React (Vite) + Firebase (Auth, Firestore, Hosting) + ImgBB (圖片存放) + Vanilla CSS
+- **圖片存放**: 改用 ImgBB API（https://api.imgbb.com/1/upload）取代 Firebase Storage — 因為 Storage 要求 Blaze 付費方案。頭像與訊息圖片上傳後只保存回傳的 URL，不使用 Firebase Storage SDK。
 - **截止日期**: 2026/05/07
 - **部署**: Firebase Hosting
 
@@ -24,6 +25,10 @@
 5. **XSS 防護**: 所有使用者輸入都要 sanitize
 6. **RWD**: 所有元件在各種螢幕尺寸下都必須可見，不能因為螢幕小就消失，也不能需要滾動才能看到主要功能
 7. **使用 Google Font `Inter`** 作為主要字體
+8. **每個 Phase 完成後、`git commit` 前，必須更新 `AI_reference.md`**：在該 Phase 的小節用下面格式簡短記錄，不用逐步詳述，**聚焦重點改動**：
+   - **Prompt**: 使用者關鍵指令（摘要即可）
+   - **Location**: 本 Phase 新增/修改的主要檔案（檔名，必要時加大略行數）
+   - **Refinement & Explanation**: 重點改動與原因（3~5 行），特別標記任何偏離計畫的決策（例如換掉 Storage、補了未列在原 plan 的變數等）
 
 ---
 
@@ -41,6 +46,7 @@ VITE_FIREBASE_APP_ID=
 VITE_FIREBASE_VAPID_KEY=
 VITE_GEMINI_API_KEY=
 VITE_GIPHY_API_KEY=
+VITE_IMGBB_API_KEY=
 ```
 
 同時建立 `.env.example` 內容相同但不含值，供 README 參考。
@@ -121,7 +127,7 @@ users/{userId}
   ├── uid: string
   ├── email: string
   ├── username: string
-  ├── photoURL: string           # Firebase Storage 下載連結
+  ├── photoURL: string           # ImgBB 下載連結
   ├── phone: string
   ├── address: string
   ├── blockedUsers: string[]     # 被封鎖的 UID 列表
@@ -223,7 +229,7 @@ chatroom/
 │   │   ├── chatroomService.js
 │   │   ├── messageService.js
 │   │   ├── userService.js
-│   │   ├── storageService.js
+│   │   ├── imgbbService.js
 │   │   ├── notificationService.js
 │   │   ├── geminiService.js
 │   │   └── giphyService.js
@@ -281,7 +287,6 @@ dist
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -297,11 +302,12 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 export default app;
 ```
 
-注意：`getMessaging` 只在需要的地方 import，因為它在 SSR 或無瀏覽器環境會報錯。
+注意：
+- 不再 import `getStorage` — 圖片改用 ImgBB。`storageBucket` 欄位仍保留在 `firebaseConfig` 以符合官方 config 格式，但不會實際使用。
+- `getMessaging` 只在需要的地方 import，因為它在 SSR 或無瀏覽器環境會報錯。
 
 ### Step 0.5 — 設定 `index.html`
 
@@ -634,15 +640,47 @@ export const unsendMessage = async (chatroomId, messageId) => {
 - `blockUser(currentUserId, targetUserId)` — `arrayUnion`
 - `unblockUser(currentUserId, targetUserId)` — `arrayRemove`
 
-### Step 3.2 — Storage Service
+### Step 3.2 — ImgBB Service（取代 Firebase Storage）
 
-建立 `src/services/storageService.js`:
-- `uploadProfileImage(userId, file)`:
-  - 上傳到 `profile_images/{userId}`
-  - 回傳 `getDownloadURL` 的結果
-- `uploadMessageImage(chatroomId, file)`:
-  - 上傳到 `message_images/{chatroomId}/{timestamp}_{filename}`
-  - 回傳下載 URL
+**背景**: 因為 Firebase Storage 要付費升級 Blaze 方案，改用 ImgBB 免費 API。Endpoint: `https://api.imgbb.com/1/upload`，multipart/form-data POST，回傳 JSON 含 `data.url`（永久連結）、`data.display_url`、`data.thumb.url`。單張上限 32MB，不需要驗證，只靠 API key。
+
+建立 `src/services/imgbbService.js`:
+```javascript
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
+const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+
+// 上傳任意圖片，回傳永久可存取的 URL
+export async function uploadImage(file, name) {
+  if (!file) throw new Error('No file provided');
+  const formData = new FormData();
+  formData.append('key', IMGBB_API_KEY);
+  formData.append('image', file);
+  if (name) formData.append('name', name);
+
+  const res = await fetch(IMGBB_UPLOAD_URL, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error?.message || 'ImgBB upload failed');
+  }
+  return data.data.url;
+}
+
+// 上傳使用者頭像 — 以 uid 當檔名便於後台辨識
+export const uploadProfileImage = (userId, file) =>
+  uploadImage(file, `profile_${userId}_${Date.now()}`);
+
+// 上傳訊息圖片
+export const uploadMessageImage = (chatroomId, file) =>
+  uploadImage(file, `msg_${chatroomId}_${Date.now()}`);
+```
+
+重點：
+- 不用驗證、不用 CORS proxy，瀏覽器直接打。
+- 因為 API key 跟著 bundle 進 client，**不要用在付費專案上**；Free tier 拿來交作業足夠。
+- 若上傳失敗（網路錯誤、檔案超過 32MB、格式不支援），在 UI 要 catch 並顯示錯誤提示。
 
 ### Step 3.3 — ProfileModal
 
@@ -688,7 +726,7 @@ export const unsendMessage = async (chatroomId, messageId) => {
 ### Step 4.4 — 傳送圖片 (Send Image)
 - MessageInput 的圖片按鈕觸發隱藏的 `<input type="file" accept="image/*">`
 - 選擇檔案後顯示預覽（Modal 或 inline preview）
-- 確認後上傳到 Firebase Storage → 取得 URL → 發送 type: "image" 訊息
+- 確認後呼叫 `uploadMessageImage(chatroomId, file)`（ImgBB）→ 取得 URL → 發送 type: "image" 訊息
 - MessageBubble 中圖片以縮圖顯示（max-width: 300px）
 - 點擊圖片打開 ImagePreview Modal (全螢幕預覽)
 
@@ -1071,7 +1109,8 @@ README 必須包含：
 
 ## 使用技術
 - React (Vite)
-- Firebase (Auth, Firestore, Storage, Hosting)
+- Firebase (Auth, Firestore, Hosting)
+- ImgBB (圖片上傳)
 - Gemini API
 - GIPHY API
 - DOMPurify

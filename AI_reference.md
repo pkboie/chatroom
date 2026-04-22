@@ -33,3 +33,23 @@ a brief explanation of why you made those changes and how the logic works.
 - `VITE_FIREBASE_VAPID_KEY` 留空：Phase 5 計畫走瀏覽器原生 Notification API，不需要 FCM VAPID key。
 - **偏離計畫的重大決策 — 換掉 Firebase Storage**：Storage 要求 Blaze 付費方案，改用 ImgBB 免費 API（32MB/張、永久保存、只需 API key）。影響：`firebase.js` 移除 `getStorage`，`CLAUDE_PLAN.md` 改寫 Step 3.2 成 `imgbbService.js`，新增 `VITE_IMGBB_API_KEY`。上層元件介面不變（仍是 `uploadProfileImage` / `uploadMessageImage`），只換底層實作。
 - `npm run build` 驗證通過，Git 初始化在 `main` 分支並完成 Phase 0 commit。
+
+## phase 1 — 會員系統 (Email + Google)
+
+**Prompt**: 進 Phase 1，實作 Email/Google 登入註冊與路由保護。
+
+**Location**:
+- `src/contexts/AuthContext.jsx` — `AuthProvider` 用 `onAuthStateChanged` 同步 `currentUser`，並訂閱 `users/{uid}` 文件即時取得 `userProfile`
+- `src/services/authService.js` — `registerWithEmail` / `loginWithEmail` / `loginWithGoogle` / `logout`，新註冊會在 Firestore 建立完整 user 文件（含 `blockedUsers: []`、phone/address 預留欄位）；附 `getAuthErrorMessage` 把 Firebase 錯誤碼翻成中文
+- `src/pages/LoginPage.jsx` / `RegisterPage.jsx` / `auth.css` — 玻璃擬態卡片、`@keyframes authCardIn` fadeIn+slideUp 進場動畫、gradient 主按鈕、雙色光暈背景
+- `src/components/auth/GoogleLoginBtn.jsx` — 內嵌官方四色 Google logo SVG（不依賴外部圖檔）
+- `src/components/common/LoadingSpinner.jsx` + `.css` — 通用 spinner，`@keyframes spin`，支援 fullscreen 蓋版
+- `src/pages/ChatPage.jsx` — 暫時的歡迎畫面（顯示 username + UID + 登出鈕），實際 UI 留待 Phase 2
+- `src/App.jsx` — `BrowserRouter` + `AuthProvider` + `PrivateRoute` / `PublicOnlyRoute`，已登入訪問 `/login` 自動轉去 `/`，未知路徑 fallback 到 `/`
+
+**Refinement & Explanation**:
+- `AuthContext` 多訂閱一層 `userProfile`：原計畫只要 `currentUser`，但後面 Phase 2/3 多元件都要 `username` / `photoURL`，提早把 Firestore profile 即時化可避免每個元件各自 `getDoc` + 同步問題。
+- 多了 `PublicOnlyRoute`：登入後再造訪 `/login` 會跳回 `/`，避免出現「明明已登入卻看到登入表單」的尷尬狀態。
+- `getAuthErrorMessage` 統一翻譯錯誤碼：Firebase 預設訊息是英文且偏技術，集中處理可保 UI 一致、後續 Phase 也能複用。
+- 表單輸入全部過 `sanitizeInput` 後再丟出去，username 的 trim 與長度檢查在前端先擋；密碼不過 sanitize（避免影響特殊字元）。
+- `npm run build` 通過（612 KB，僅內建 chunk-size warning，可後續 code-split 優化）。

@@ -1,27 +1,85 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { logout } from '../services/authService';
+import { useChatrooms } from '../hooks/useChatrooms';
+import Sidebar from '../components/sidebar/Sidebar';
+import ChatArea from '../components/chat/ChatArea';
+import CreateRoomModal from '../components/sidebar/CreateRoomModal';
+import InviteMemberModal from '../components/sidebar/InviteMemberModal';
 import './ChatPage.css';
 
-function ChatPage() {
-  const { currentUser, userProfile } = useAuth();
+const MOBILE_BREAKPOINT = 768;
 
-  const handleLogout = async () => {
-    await logout();
+function ChatPage() {
+  const { currentUser } = useAuth();
+  const { chatrooms } = useChatrooms(currentUser?.uid);
+
+  const [selectedChatroomId, setSelectedChatroomId] = useState(null);
+  const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BREAKPOINT : false,
+  );
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const selectedChatroom = useMemo(
+    () => chatrooms.find((r) => r.id === selectedChatroomId) || null,
+    [chatrooms, selectedChatroomId],
+  );
+
+  const handleSelectChatroom = (id) => {
+    setSelectedChatroomId(id);
+    if (isMobile) setSidebarOpen(false);
   };
 
-  const displayName =
-    userProfile?.username || currentUser?.displayName || currentUser?.email || '使用者';
+  const handleCreated = (newRoomId) => {
+    setSelectedChatroomId(newRoomId);
+    if (isMobile) setSidebarOpen(false);
+  };
 
   return (
-    <div className="chat-placeholder">
-      <div className="chat-placeholder-card">
-        <h1>歡迎，{displayName}</h1>
-        <p>Phase 1 完成，登入與註冊系統已上線。</p>
-        <p className="chat-placeholder-meta">UID: {currentUser?.uid}</p>
-        <button type="button" className="chat-placeholder-logout" onClick={handleLogout}>
-          登出
-        </button>
-      </div>
+    <div className="chat-page">
+      {isMobile && sidebarOpen && (
+        <div
+          className="chat-page-sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        selectedChatroomId={selectedChatroomId}
+        onSelectChatroom={handleSelectChatroom}
+        onOpenCreateRoom={() => setShowCreateRoom(true)}
+        className={isMobile ? (sidebarOpen ? 'mobile-open' : 'mobile-closed') : ''}
+      />
+
+      <ChatArea
+        chatroomId={selectedChatroomId}
+        onOpenInvite={selectedChatroom?.type === 'group' ? () => setShowInvite(true) : null}
+        onMobileMenu={() => setSidebarOpen((s) => !s)}
+        showMobileMenu={isMobile}
+      />
+
+      <CreateRoomModal
+        isOpen={showCreateRoom}
+        onClose={() => setShowCreateRoom(false)}
+        currentUser={currentUser}
+        onCreated={handleCreated}
+      />
+
+      {selectedChatroom && (
+        <InviteMemberModal
+          isOpen={showInvite}
+          onClose={() => setShowInvite(false)}
+          chatroom={selectedChatroom}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 }

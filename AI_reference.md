@@ -53,3 +53,25 @@ a brief explanation of why you made those changes and how the logic works.
 - `getAuthErrorMessage` 統一翻譯錯誤碼：Firebase 預設訊息是英文且偏技術，集中處理可保 UI 一致、後續 Phase 也能複用。
 - 表單輸入全部過 `sanitizeInput` 後再丟出去，username 的 trim 與長度檢查在前端先擋；密碼不過 sanitize（避免影響特殊字元）。
 - `npm run build` 通過（612 KB，僅內建 chunk-size warning，可後續 code-split 優化）。
+
+## phase 2 — 聊天室核心（即時訊息）
+
+**Prompt**: 進 Phase 2，建立即時聊天核心（私聊/群聊、訊息收發、Sidebar/ChatArea）。
+
+**Location**:
+- `src/services/chatroomService.js` / `messageService.js` / `userService.js` — Firestore 訂閱 + CRUD；`findPrivateChatroom` 用於避免建立重複私聊
+- `src/hooks/useChatrooms.js` / `useMessages.js` — 封裝 `onSnapshot` 生命週期
+- `src/components/common/Avatar.jsx` + `Modal.jsx` — 通用頭像（錯誤退回首字母）與 Modal（Escape 關閉、scale+fade 動畫、點背景關閉）
+- `src/components/sidebar/` — `Sidebar` / `ChatroomList` / `ChatroomItem` / `UserPicker` / `CreateRoomModal` / `InviteMemberModal`
+- `src/components/chat/` — `ChatArea` / `ChatHeader` / `MessageList` / `MessageBubble` / `MessageInput`
+- `src/pages/ChatPage.jsx` + `.css` — Sidebar + ChatArea 佈局、mobile 漢堡選單、CreateRoom/Invite modal 控制
+- `src/components/chat/MessageBubble.css` — `@keyframes messageIn`（訊息進場 slideUp）
+
+**Refinement & Explanation**:
+- **私聊去重**：`CreateRoomModal` 先呼叫 `findPrivateChatroom`，已存在就直接選取而不再建一間。避免雙方各自建立不同房的混亂。
+- **UserPicker 抽離**：CreateRoom 和 Invite 都要選人，共用同一個 `UserPicker` 元件（支援單選/多選、搜尋、排除清單）避免重複。
+- **MessageInput 先做純文字**：圖片 / GIF / emoji 反應分別屬 Phase 4 / 6，現在不掛空按鈕，等各自 Phase 再加，避免 UI 有不可用的占位。
+- **Mobile 漢堡選單提早做**：原計畫 Phase 7 才處理 RWD，但 Sidebar 佈局實際會影響所有 Phase，現在先用 media query + `mobile-open/closed` class 讓側邊欄在 ≤768px 變成 overlay，之後 Phase 7 只需補強細節。
+- **`senderName`/`senderPhoto` 寫死在訊息**：沿用計畫的 denormalize 設計 — 訊息發送時快照使用者資料，避免後續 render 每則訊息都得 `getDoc` 查使用者，同時也保留了「傳送當下的發送者名稱」的歷史意義。
+- **Firestore 可能提示建立 composite index**：`subscribeToChatrooms` 用 `where('members','array-contains') + orderBy('lastMessageAt')`，第一次執行時 Console 會回傳建索引連結，點開按一下即可。
+- `npm run build` 通過（637 KB）。

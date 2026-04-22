@@ -1,0 +1,39 @@
+.chatroom-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chatroom-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatroom-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.chatroom-list-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.chatroom-list-empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.chatroom-list-empty-sub {
+  color: var(--text-muted);
+  font-size: 12px;
+}

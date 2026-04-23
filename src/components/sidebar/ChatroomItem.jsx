@@ -1,12 +1,25 @@
 import Avatar from '../common/Avatar';
 import { formatTime } from '../../utils/formatTime';
 import { sanitizeInput } from '../../utils/sanitize';
+import { useUsers } from '../../contexts/UsersContext';
 import './ChatroomItem.css';
 
 function ChatroomItem({ chatroom, currentUserId, isSelected, onClick }) {
+  const { usersById } = useUsers();
   const isGroup = chatroom.type === 'group';
   const memberCount = (chatroom.members || []).length;
-  const displayName = chatroom.name || (isGroup ? '未命名群組' : '私聊');
+
+  let displayName;
+  let avatarSrc;
+  if (isGroup) {
+    displayName = chatroom.name || '未命名群組';
+  } else {
+    const otherUid = (chatroom.members || []).find((uid) => uid !== currentUserId);
+    const otherUser = otherUid ? usersById[otherUid] : null;
+    displayName = otherUser?.username || chatroom.name || '私聊';
+    avatarSrc = otherUser?.photoURL;
+  }
+
   const lastMessage = sanitizeInput(chatroom.lastMessage || '');
   const time = formatTime(chatroom.lastMessageAt);
 
@@ -16,7 +29,7 @@ function ChatroomItem({ chatroom, currentUserId, isSelected, onClick }) {
       className={`chatroom-item ${isSelected ? 'is-selected' : ''}`}
       onClick={onClick}
     >
-      <Avatar name={displayName} size="md" />
+      <Avatar src={avatarSrc} name={displayName} size="md" />
       <div className="chatroom-item-body">
         <div className="chatroom-item-row">
           <span className="chatroom-item-name" title={displayName}>

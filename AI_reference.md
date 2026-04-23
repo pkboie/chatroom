@@ -94,3 +94,4 @@ a brief explanation of why you made those changes and how the logic works.
 - **ImgBB 前端驗證**：雖然 API 會擋錯誤檔案，但先在前端擋掉 `!file.type.startsWith('image/')` 與 `size > 32 MB`，使用者拿到的錯誤訊息更即時也可以是中文。
 - **denormalized `senderName` / `senderPhoto` 的 trade-off**：使用者改名/頭像後，**歷史訊息的 bubble 不會跟著變**（符合 Phase 2 設計，保留「發送當下」狀態）。未來 Phase 6 block 邏輯看的是 `senderId` 而非 name，不受影響。
 - `npm run build` 通過（642 KB）。
+- **後續修正（同 Phase）— 私聊名稱依觀看者解析**：原 `CreateRoomModal` 把對方 username 直接寫進 `chatroom.name`，但這只是「建立者視角下的對方」，導致非建立者登入時看到的是自己。新增 `src/contexts/UsersContext.jsx` 訂閱整個 `users` collection 並 memo 出 `usersById`，掛在 `App.jsx` 的 `AuthProvider` 內。`ChatroomItem` / `ChatHeader` 改在 render 時找出 `chatroom.members` 中「非自己」的 uid，再用 `usersById[otherUid]` 取得對方最新 `username` / `photoURL`；對方改名/換頭像會即時反映。群組仍走 `chatroom.name`。`chatroom.name` 保留為 fallback 但實質失效，後續 Phase 可考慮移除或改存純粹 metadata。

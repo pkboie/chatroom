@@ -1,7 +1,12 @@
 import Avatar from '../common/Avatar';
+import { useAuth } from '../../contexts/AuthContext';
+import { useUsers } from '../../contexts/UsersContext';
 import './ChatHeader.css';
 
 function ChatHeader({ chatroom, onOpenInvite, onOpenSearch, onMobileMenu }) {
+  const { currentUser } = useAuth();
+  const { usersById } = useUsers();
+
   if (!chatroom) {
     return (
       <header className="chat-header">
@@ -18,6 +23,17 @@ function ChatHeader({ chatroom, onOpenInvite, onOpenSearch, onMobileMenu }) {
   const isGroup = chatroom.type === 'group';
   const memberCount = (chatroom.members || []).length;
 
+  let displayName;
+  let avatarSrc;
+  if (isGroup) {
+    displayName = chatroom.name || '未命名群組';
+  } else {
+    const otherUid = (chatroom.members || []).find((uid) => uid !== currentUser?.uid);
+    const otherUser = otherUid ? usersById[otherUid] : null;
+    displayName = otherUser?.username || chatroom.name || '私聊';
+    avatarSrc = otherUser?.photoURL;
+  }
+
   return (
     <header className="chat-header">
       {onMobileMenu && (
@@ -31,9 +47,9 @@ function ChatHeader({ chatroom, onOpenInvite, onOpenSearch, onMobileMenu }) {
         </button>
       )}
 
-      <Avatar name={chatroom.name} size="md" />
+      <Avatar src={avatarSrc} name={displayName} size="md" />
       <div className="chat-header-meta">
-        <h2 className="chat-header-name">{chatroom.name || (isGroup ? '未命名群組' : '私聊')}</h2>
+        <h2 className="chat-header-name">{displayName}</h2>
         <p className="chat-header-sub">
           {isGroup ? `${memberCount} 位成員` : '私人對話'}
         </p>

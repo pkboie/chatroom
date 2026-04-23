@@ -6,7 +6,6 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -43,16 +42,27 @@ export async function findPrivateChatroom(currentUserId, otherUserId) {
   return found ? { id: found.id, ...found.data() } : null;
 }
 
+const tsToMillis = (ts) => {
+  if (!ts) return 0;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  if (ts.seconds) return ts.seconds * 1000;
+  return 0;
+};
+
 export function subscribeToChatrooms(userId, callback, onError) {
-  const q = query(
-    chatroomsCol(),
-    where('members', 'array-contains', userId),
-    orderBy('lastMessageAt', 'desc'),
-  );
+  // No orderBy → avoids composite index requirement; sort client-side instead.
+  // Also lets us display newly-created rooms immediately even while serverTimestamp is pending.
+  const q = query(chatroomsCol(), where('members', 'array-contains', userId));
   return onSnapshot(
     q,
     (snap) => {
-      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      rooms.sort((a, b) => {
+        const ta = tsToMillis(a.lastMessageAt) || tsToMillis(a.createdAt);
+        const tb = tsToMillis(b.lastMessageAt) || tsToMillis(b.createdAt);
+        return tb - ta;
+      });
+      callback(rooms);
     },
     (err) => {
       if (onError) onError(err);

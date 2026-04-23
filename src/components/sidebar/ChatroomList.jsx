@@ -2,11 +2,20 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ChatroomItem from './ChatroomItem';
 import './ChatroomList.css';
 
-function ChatroomList({ chatrooms, loading, currentUserId, selectedChatroomId, onSelect }) {
+function ChatroomList({ chatrooms, loading, error, currentUserId, selectedChatroomId, onSelect }) {
   if (loading) {
     return (
       <div className="chatroom-list-state">
         <LoadingSpinner size={28} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="chatroom-list-state">
+        <p className="chatroom-list-empty">無法載入聊天室</p>
+        <p className="chatroom-list-empty-sub">{error.code || error.message}</p>
       </div>
     );
   }

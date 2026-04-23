@@ -13,7 +13,7 @@ function Sidebar({
   className = '',
 }) {
   const { currentUser, userProfile } = useAuth();
-  const { chatrooms, loading } = useChatrooms(currentUser?.uid);
+  const { chatrooms, loading, error } = useChatrooms(currentUser?.uid);
 
   const displayName = userProfile?.username || currentUser?.displayName || '使用者';
 
@@ -47,6 +47,7 @@ function Sidebar({
       <ChatroomList
         chatrooms={chatrooms}
         loading={loading}
+        error={error}
         currentUserId={currentUser?.uid}
         selectedChatroomId={selectedChatroomId}
         onSelect={onSelectChatroom}

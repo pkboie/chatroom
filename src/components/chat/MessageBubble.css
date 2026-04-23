@@ -102,8 +102,14 @@
   transition: opacity 0.15s ease;
 }
 
-.message-row:hover .message-bubble-menu {
+.message-row:hover .message-bubble-menu,
+.message-bubble-menu.is-open {
   opacity: 1;
+}
+
+.message-bubble-menu.is-open .message-bubble-menu-trigger {
+  background: var(--hover-color);
+  color: var(--text-primary);
 }
 
 .message-bubble-menu-trigger {

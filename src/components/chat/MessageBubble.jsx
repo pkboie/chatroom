@@ -86,7 +86,10 @@ function MessageBubble({
             {renderContent()}
           </div>
           {canShowMenu && (
-            <div className="message-bubble-menu" ref={menuRef}>
+            <div
+              className={`message-bubble-menu ${menuOpen ? 'is-open' : ''}`}
+              ref={menuRef}
+            >
               <button
                 type="button"
                 className="message-bubble-menu-trigger"

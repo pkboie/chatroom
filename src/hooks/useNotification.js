@@ -20,9 +20,16 @@ const previewFor = (type, content) => {
  * user gesture for that. The Sidebar exposes a manual button. We just check
  * `Notification.permission === 'granted'` before firing.
  */
-export function useNotification({ currentUserId, chatrooms, activeChatroomId, onClickChatroom }) {
+export function useNotification({
+  currentUserId,
+  chatrooms,
+  activeChatroomId,
+  onClickChatroom,
+  onNotify,
+}) {
   const activeRef = useRef(activeChatroomId);
   const onClickRef = useRef(onClickChatroom);
+  const onNotifyRef = useRef(onNotify);
 
   useEffect(() => {
     activeRef.current = activeChatroomId;
@@ -32,13 +39,16 @@ export function useNotification({ currentUserId, chatrooms, activeChatroomId, on
     onClickRef.current = onClickChatroom;
   }, [onClickChatroom]);
 
+  useEffect(() => {
+    onNotifyRef.current = onNotify;
+  }, [onNotify]);
+
   // Subscribe per-chatroom. Re-run only when the set of chatroom ids actually
   // changes (not on every chatrooms list reorder).
   const chatroomIds = (chatrooms || []).map((c) => c.id).sort().join(',');
 
   useEffect(() => {
     if (!currentUserId || !chatrooms || chatrooms.length === 0) return undefined;
-    if (!isNotificationSupported()) return undefined;
 
     const unsubs = chatrooms.map((room) => {
       // Per-chatroom bookkeeping: on the first snapshot we mark every existing
@@ -72,14 +82,25 @@ export function useNotification({ currentUserId, chatrooms, activeChatroomId, on
             if (msg.senderId === currentUserId) return;
             if (msg.isUnsent) return;
             if (room.id === activeRef.current && document.hasFocus()) return;
-            if (Notification.permission !== 'granted') return;
 
             const senderName = sanitizeInput(msg.senderName || '訊息');
             const body = previewFor(msg.type, msg.content);
 
-            showNotification(senderName, body, () => {
-              onClickRef.current?.(room.id);
+            // In-app toast always fires (works even when OS notifications
+            // are blocked or silenced by Focus Assist / Do Not Disturb).
+            onNotifyRef.current?.({
+              id: `${room.id}:${id}`,
+              chatroomId: room.id,
+              title: senderName,
+              body,
             });
+
+            // Browser notification — best-effort, requires permission.
+            if (isNotificationSupported() && Notification.permission === 'granted') {
+              showNotification(senderName, body, () => {
+                onClickRef.current?.(room.id);
+              });
+            }
           });
         },
         (err) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChatrooms } from '../hooks/useChatrooms';
 import { useNotification } from '../hooks/useNotification';
@@ -7,9 +7,12 @@ import ChatArea from '../components/chat/ChatArea';
 import CreateRoomModal from '../components/sidebar/CreateRoomModal';
 import InviteMemberModal from '../components/sidebar/InviteMemberModal';
 import ProfileModal from '../components/profile/ProfileModal';
+import NotificationToast from '../components/common/NotificationToast';
 import './ChatPage.css';
 
 const MOBILE_BREAKPOINT = 768;
+const TOAST_TTL_MS = 5000;
+const MAX_TOASTS = 3;
 
 function ChatPage() {
   const { currentUser, userProfile } = useAuth();
@@ -23,6 +26,8 @@ function ChatPage() {
     typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BREAKPOINT : false,
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const dismissTimers = useRef(new Map());
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
@@ -35,6 +40,43 @@ function ChatPage() {
     [chatrooms, selectedChatroomId],
   );
 
+  const dismissToast = useCallback((id) => {
+    const timer = dismissTimers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      dismissTimers.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const pushToast = useCallback(
+    (toast) => {
+      setToasts((prev) => {
+        const next = [...prev.filter((t) => t.id !== toast.id), toast];
+        return next.slice(-MAX_TOASTS);
+      });
+      const timer = setTimeout(() => dismissToast(toast.id), TOAST_TTL_MS);
+      dismissTimers.current.set(toast.id, timer);
+    },
+    [dismissToast],
+  );
+
+  useEffect(() => {
+    return () => {
+      dismissTimers.current.forEach((t) => clearTimeout(t));
+      dismissTimers.current.clear();
+    };
+  }, []);
+
+  const handleClickToast = useCallback(
+    (toast) => {
+      setSelectedChatroomId(toast.chatroomId);
+      if (isMobile) setSidebarOpen(false);
+      dismissToast(toast.id);
+    },
+    [isMobile, dismissToast],
+  );
+
   useNotification({
     currentUserId: currentUser?.uid,
     chatrooms,
@@ -43,6 +85,7 @@ function ChatPage() {
       setSelectedChatroomId(id);
       if (isMobile) setSidebarOpen(false);
     },
+    onNotify: pushToast,
   });
 
   const handleSelectChatroom = (id) => {
@@ -100,6 +143,12 @@ function ChatPage() {
         onClose={() => setShowProfile(false)}
         currentUser={currentUser}
         userProfile={userProfile}
+      />
+
+      <NotificationToast
+        toasts={toasts}
+        onClick={handleClickToast}
+        onDismiss={dismissToast}
       />
     </div>
   );

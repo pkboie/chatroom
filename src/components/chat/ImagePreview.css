@@ -1,0 +1,56 @@
+.image-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 32px;
+  animation: imagePreviewIn 0.18s ease-out both;
+}
+
+.image-preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  animation: imageScaleIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.image-preview-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+  z-index: 1;
+}
+
+.image-preview-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+@keyframes imagePreviewIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes imageScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

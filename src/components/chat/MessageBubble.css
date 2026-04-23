@@ -27,6 +27,17 @@
   padding: 0 4px;
 }
 
+.message-bubble-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.message-row.is-self .message-bubble-stack {
+  flex-direction: row-reverse;
+}
+
 .message-bubble {
   padding: 9px 13px;
   border-radius: var(--radius-md);
@@ -35,6 +46,7 @@
   word-wrap: break-word;
   word-break: break-word;
   border-bottom-left-radius: 4px;
+  transition: box-shadow 0.3s ease;
 }
 
 .message-bubble.is-self {
@@ -48,6 +60,10 @@
   background: transparent;
   border: 1px dashed var(--border-color);
   color: var(--text-muted);
+}
+
+.message-bubble.is-highlighted {
+  animation: highlightPulse 2s ease-out;
 }
 
 .message-bubble-text {
@@ -80,6 +96,75 @@
   margin-left: 4px;
 }
 
+.message-bubble-menu {
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.message-row:hover .message-bubble-menu {
+  opacity: 1;
+}
+
+.message-bubble-menu-trigger {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.message-bubble-menu-trigger:hover {
+  background: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.message-bubble-menu-list {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  min-width: 120px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: bubbleMenuIn 0.12s ease-out both;
+}
+
+.message-bubble-menu-list.is-self {
+  right: 0;
+  left: auto;
+}
+
+.message-bubble-menu-item {
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  color: var(--text-primary);
+  background: transparent;
+  transition: background var(--transition-fast);
+  white-space: nowrap;
+}
+
+.message-bubble-menu-item:hover {
+  background: var(--hover-color);
+}
+
+.message-bubble-menu-item.is-danger {
+  color: var(--error);
+}
+
 @keyframes messageIn {
   from {
     opacity: 0;
@@ -88,5 +173,25 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes bubbleMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+  }
+  30%, 70% {
+    box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.6);
   }
 }

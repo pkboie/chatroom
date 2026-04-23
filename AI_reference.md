@@ -95,3 +95,26 @@ a brief explanation of why you made those changes and how the logic works.
 - **denormalized `senderName` / `senderPhoto` 的 trade-off**：使用者改名/頭像後，**歷史訊息的 bubble 不會跟著變**（符合 Phase 2 設計，保留「發送當下」狀態）。未來 Phase 6 block 邏輯看的是 `senderId` 而非 name，不受影響。
 - `npm run build` 通過（642 KB）。
 - **後續修正（同 Phase）— 私聊名稱依觀看者解析**：原 `CreateRoomModal` 把對方 username 直接寫進 `chatroom.name`，但這只是「建立者視角下的對方」，導致非建立者登入時看到的是自己。新增 `src/contexts/UsersContext.jsx` 訂閱整個 `users` collection 並 memo 出 `usersById`，掛在 `App.jsx` 的 `AuthProvider` 內。`ChatroomItem` / `ChatHeader` 改在 render 時找出 `chatroom.members` 中「非自己」的 uid，再用 `usersById[otherUid]` 取得對方最新 `username` / `photoURL`；對方改名/換頭像會即時反映。群組仍走 `chatroom.name`。`chatroom.name` 保留為 fallback 但實質失效，後續 Phase 可考慮移除或改存純粹 metadata。
+
+## phase 4 — 訊息操作（收回 / 編輯 / 搜尋 / 傳送圖片）
+
+**Prompt**: 進 Phase 4，實作訊息收回、編輯、搜尋、傳送圖片。
+
+**Location**:
+- `src/components/chat/MessageBubble.jsx` + `.css` — 自己的訊息 hover 顯示「⋯」按鈕，展開選單含「✏️ 編輯」（僅 text 訊息）與「🗑 收回」（破壞性，紅色，跳 `confirm` 二次確認）；新增 `is-highlighted` class 與 `@keyframes highlightPulse`（搜尋跳轉時閃 2 秒紫光暈）
+- `src/components/chat/MessageList.jsx` — 把 `onEdit` / `onUnsend` / `onImageClick` / `highlightedMessageId` 一路 props drilling 給 bubble；每個 bubble wrapper 加 `data-message-id`，以 `useEffect` 監聽 `highlightedMessageId` 用 `querySelector` + `scrollIntoView({ block: 'center' })` 定位
+- `src/components/chat/MessageInput.jsx` + `.css` — 新增「📎」附加按鈕、隱藏 `<input type="file" accept="image/*">`、選檔後上方顯示 inline preview（檔名 + 移除鈕）；支援 `editingMessage` prop：banner「✏️ 正在編輯訊息」+ 取消按鈕，Enter 改呼叫 `editMessage`，Esc 取消編輯；發送圖片走 `uploadMessageImage` → ImgBB → `sendMessage` type=`image`
+- `src/components/chat/MessageSearch.jsx` + `.css` — 浮動 panel（`position: absolute`，掛在 `chat-area-body` 右上），即時前端 filter 不區分大小寫，跳過 `isUnsent` 與非 text 訊息，結果列表顯示 sender + time + 兩行截斷的 preview
+- `src/components/chat/ImagePreview.jsx` + `.css` — 全螢幕半透明背景，`position: fixed`、Esc 關閉、點背景關閉、scaleIn 進場
+- `src/components/chat/ChatArea.jsx` + `.css` — host 4 個新 state（`editingMessage` / `searchOpen` / `highlightedMessageId` / `previewImage`）；切換聊天室時全部重置；`highlightedMessageId` 用 2 秒 `setTimeout` 自動清掉；新增 `.chat-area-body` wrapper（`position: relative` + flex column），讓 search panel 能 absolute 定位
+
+**Refinement & Explanation**:
+- **State 全部 lift 到 ChatArea**：MessageInput 的 edit 模式、search panel 開關、跳轉高亮 — 三者都跨元件，集中放 ChatArea 才能正確協調（例如收回正在編輯的訊息要同時清掉 editing state）。MessageBubble 與 MessageInput 維持 dumb 元件，狀態只往上拋 callback。
+- **收回前跳 `window.confirm`**：收回是不可逆操作，UX 上不能單擊就觸發。雖然原計畫沒明文要求，但跟主流 IM（Telegram、Messenger）一致。
+- **搜尋跳過 `isUnsent` 與非 text 訊息**：收回的訊息 content 還在 Firestore（只是設了 flag），搜尋時要跳過避免假命中；圖片/GIF 訊息的 content 是 URL，搜尋它沒意義。
+- **`highlightPulse` 用 `box-shadow` 而非 `background`**：bubble 本身有漸層背景，改 background 會破壞既有樣式；用 box-shadow 做 4px 紫色光暈更顯眼也不影響佈局。
+- **編輯模式 disable 圖片附加**：UX 上「編輯純文字訊息時還能加圖」沒意義，且 edit 路徑只更新 content 字串，加圖會讓資料模型混亂；直接在按鈕 disabled + 改 title 提示。
+- **ImgBB 上傳期間用按鈕文字 `⏳`**：避免另外做 loading overlay。`uploading` 同時 disable 整個 input 區塊（含 textarea），防止重複觸發。
+- **MessageSearch panel 不蓋住 input**：原本想用 Modal，實測會擋住聊天輸入；改用 chat area 內的 floating panel（max-height 算 100% - 80px），跳轉到結果時才會關閉 panel 並露出對應訊息。
+- **denormalize 副作用 — 編輯後 `lastMessage` 不會更新**：`editMessage` 只動該訊息文件，sidebar 顯示的 `lastMessage` 是 chatroom 文件的 snapshot，編輯最後一則訊息後 sidebar 預覽不變。Phase 5 可在 `editMessage` 內補一個 conditional update（只在編輯的是最新一則時才同步），目前先接受此 trade-off。
+- `npm run build` 通過（650 KB）。

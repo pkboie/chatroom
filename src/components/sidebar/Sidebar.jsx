@@ -2,6 +2,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useChatrooms } from '../../hooks/useChatrooms';
 import Avatar from '../common/Avatar';
 import ChatroomList from './ChatroomList';
+import NotificationButton from './NotificationButton';
 import { sanitizeInput } from '../../utils/sanitize';
 import './Sidebar.css';
 
@@ -39,9 +40,12 @@ function Sidebar({
           <span className="sidebar-user-gear" aria-hidden>⚙</span>
         </button>
 
-        <button type="button" className="sidebar-new-chat" onClick={onOpenCreateRoom}>
-          <span className="plus">＋</span> 新聊天
-        </button>
+        <div className="sidebar-actions">
+          <button type="button" className="sidebar-new-chat" onClick={onOpenCreateRoom}>
+            <span className="plus">＋</span> 新聊天
+          </button>
+          <NotificationButton />
+        </div>
       </div>
 
       <ChatroomList

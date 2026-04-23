@@ -14,7 +14,7 @@ export function showNotification(title, body, onClick) {
   try {
     const n = new Notification(title, {
       body,
-      icon: '/vite.svg',
+      icon: '/favicon.svg',
       tag: title,
       renotify: true,
     });

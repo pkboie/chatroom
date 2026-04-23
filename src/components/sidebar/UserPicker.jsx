@@ -84,7 +84,7 @@ function UserPicker({
               >
                 <Avatar src={u.photoURL} name={u.username} size="sm" />
                 <div className="user-picker-meta">
-                  <p className="user-picker-name">{u.username}</p>
+                  <p className="user-picker-name">{sanitizeInput(u.username)}</p>
                   <p className="user-picker-email">{u.email}</p>
                 </div>
                 <span className={`user-picker-check ${checked ? 'is-on' : ''}`}>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChatrooms } from '../hooks/useChatrooms';
+import { useNotification } from '../hooks/useNotification';
 import Sidebar from '../components/sidebar/Sidebar';
 import ChatArea from '../components/chat/ChatArea';
 import CreateRoomModal from '../components/sidebar/CreateRoomModal';
@@ -33,6 +34,16 @@ function ChatPage() {
     () => chatrooms.find((r) => r.id === selectedChatroomId) || null,
     [chatrooms, selectedChatroomId],
   );
+
+  useNotification({
+    currentUserId: currentUser?.uid,
+    chatrooms,
+    activeChatroomId: selectedChatroomId,
+    onClickChatroom: (id) => {
+      setSelectedChatroomId(id);
+      if (isMobile) setSidebarOpen(false);
+    },
+  });
 
   const handleSelectChatroom = (id) => {
     setSelectedChatroomId(id);

@@ -118,3 +118,26 @@ a brief explanation of why you made those changes and how the logic works.
 - **MessageSearch panel 不蓋住 input**：原本想用 Modal，實測會擋住聊天輸入；改用 chat area 內的 floating panel（max-height 算 100% - 80px），跳轉到結果時才會關閉 panel 並露出對應訊息。
 - **denormalize 副作用 — 編輯後 `lastMessage` 不會更新**：`editMessage` 只動該訊息文件，sidebar 顯示的 `lastMessage` 是 chatroom 文件的 snapshot，編輯最後一則訊息後 sidebar 預覽不變。Phase 5 可在 `editMessage` 內補一個 conditional update（只在編輯的是最新一則時才同步），目前先接受此 trade-off。
 - `npm run build` 通過（650 KB）。
+
+## phase 5 — Advanced（瀏覽器通知 + CSS 動畫整理 + XSS 防護）
+
+**Prompt**: 進 Phase 5，實作 Chrome Notification、整理 CSS Animation、補強 XSS 防護。
+
+**Location**:
+- `src/services/notificationService.js` — `isNotificationSupported` / `requestNotificationPermission` / `showNotification`，包權限檢查與 try/catch；通知有 `tag` + `renotify`，點擊呼叫 `window.focus()` + 跳轉 callback
+- `src/hooks/useNotification.js` — 訂閱使用者所有 chatrooms 的 messages（每間 `orderBy createdAt desc, limit 15`），用 `docChanges()` 過濾 `type === 'added'`；以 `sessionStartRef`（`Date.now()`）丟掉載入前的歷史訊息；`notifiedIdsRef` 去重避免重啟 listener 重複通知；條件：非自己 + 不在 active room 或頁面失焦時才彈
+- `src/pages/ChatPage.jsx` — 接上 `useNotification`，把 `selectedChatroomId` 當 active，點擊通知後切換到對應聊天室並關閉 mobile sidebar
+- `public/firebase-messaging-sw.js` — service worker placeholder，handle `push` / `notificationclick`，未來若導入 FCM 不需再建檔
+- `src/components/common/TypingDots.jsx` + `.css` — 三點 bouncing dots，`@keyframes typingBounce`，預留給 Phase 6 chatbot loading 使用
+- `src/components/sidebar/Sidebar.jsx` / `chat/ChatHeader.jsx` / `sidebar/ChatroomItem.jsx` / `sidebar/UserPicker.jsx` — display 端統一過 `sanitizeInput`（防禦縱深，React JSX 雖會自動 escape）
+
+**Refinement & Explanation**:
+- **不用 FCM 全套**：Phase 0 就決定省略 VAPID key，這裡用瀏覽器原生 `Notification API` + Firestore `onSnapshot` 即可達成「在背景或不在當前聊天室時收到通知」。Service worker 仍建檔（`public/firebase-messaging-sw.js`）為日後切換 FCM 預留路徑。
+- **通知去重靠 `sessionStartRef` + `notifiedIdsRef`**：onSnapshot 重新訂閱時會把現有訊息當 `added` 全部回放，若不過濾就會在每次列表重排時轟炸通知。`sessionStartRef = Date.now()` 在 hook mount 時凍結，比這更早的訊息直接 mark 已通知；`notifiedIdsRef` 是 Set 在 hook 生命週期內持有，避免相同訊息 ID 重複彈出。
+- **`document.hasFocus()` 才忽略 active room**：當前聊天室訊息預設不通知，但若使用者切到別的視窗（focus 不在），即使是 active room 也應該通知 → 這個條件用 `(room.id === active && document.hasFocus())` 才跳過。
+- **訂閱粒度 = chatroom 列表變動**：useEffect dependency 用 `chatroomIds = chatrooms.map(id).sort().join(',')` 而非 `chatrooms` 本身，避免每次 sidebar 排序變化都重新訂閱所有 messages collection。`activeChatroomId` 與 `onClickChatroom` 透過 ref 取最新值，不觸發重訂。
+- **`tag` + `renotify`**：相同寄件人連續傳訊只會更新同一個系統通知，不會在通知中心堆出一長串。
+- **`limit(15)` 而非全量**：通知 hook 不需要看完整訊息歷史，每間 chatroom 訂最近 15 則就夠用，省 Firestore quota。
+- **CSS 動畫盤點**：Phase 1 `authCardIn`、Phase 2 `messageIn` / `modalScale` / `modalFade` / `spin`、Phase 3 `backdropFade` + sidebar mobile slideIn、Phase 4 `highlightPulse` / `bubbleMenuIn` / `searchPanelIn` / `imageScaleIn`，加上本 Phase 的 `typingBounce` 共 11 組 `@keyframes`，分散在各元件 CSS 中。
+- **XSS 防禦縱深**：React JSX `{}` 已自動 escape `<` / `>`，`<script>` 等惡意字串只會顯示為純文字不會執行；但仍在所有顯示「使用者可控字串」（username / 群組名）的位置額外過 `DOMPurify.sanitize(..., { ALLOWED_TAGS: [] })`，遵循 OWASP「縱深防禦」原則。可手動測試：把使用者名稱改成 `<script>alert(1)</script>` 後在 sidebar / chat header / user picker 都應顯示為純文字（DOMPurify 會把 tag 拆掉，留下 `alert(1)`），無 alert 彈窗。
+- `npm run build` 通過（652 KB）。

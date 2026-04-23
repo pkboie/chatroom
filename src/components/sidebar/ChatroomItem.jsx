@@ -9,16 +9,17 @@ function ChatroomItem({ chatroom, currentUserId, isSelected, onClick }) {
   const isGroup = chatroom.type === 'group';
   const memberCount = (chatroom.members || []).length;
 
-  let displayName;
+  let rawName;
   let avatarSrc;
   if (isGroup) {
-    displayName = chatroom.name || '未命名群組';
+    rawName = chatroom.name || '未命名群組';
   } else {
     const otherUid = (chatroom.members || []).find((uid) => uid !== currentUserId);
     const otherUser = otherUid ? usersById[otherUid] : null;
-    displayName = otherUser?.username || chatroom.name || '私聊';
+    rawName = otherUser?.username || chatroom.name || '私聊';
     avatarSrc = otherUser?.photoURL;
   }
+  const displayName = sanitizeInput(rawName);
 
   const lastMessage = sanitizeInput(chatroom.lastMessage || '');
   const time = formatTime(chatroom.lastMessageAt);

@@ -2,6 +2,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useChatrooms } from '../../hooks/useChatrooms';
 import Avatar from '../common/Avatar';
 import ChatroomList from './ChatroomList';
+import { sanitizeInput } from '../../utils/sanitize';
 import './Sidebar.css';
 
 function Sidebar({
@@ -15,7 +16,9 @@ function Sidebar({
   const { currentUser, userProfile } = useAuth();
   const { chatrooms, loading, error } = useChatrooms(currentUser?.uid);
 
-  const displayName = userProfile?.username || currentUser?.displayName || '使用者';
+  const displayName = sanitizeInput(
+    userProfile?.username || currentUser?.displayName || '使用者',
+  );
 
   return (
     <aside className={`sidebar ${className}`.trim()}>

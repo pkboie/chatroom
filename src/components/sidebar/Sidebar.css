@@ -20,6 +20,21 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.sidebar-user:hover {
+  background: var(--hover-color);
+}
+
+.sidebar-user-gear {
+  font-size: 16px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 .sidebar-user-meta {

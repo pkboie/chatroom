@@ -1,5 +1,4 @@
 import { useAuth } from '../../contexts/AuthContext';
-import { logout } from '../../services/authService';
 import { useChatrooms } from '../../hooks/useChatrooms';
 import Avatar from '../common/Avatar';
 import ChatroomList from './ChatroomList';
@@ -9,6 +8,7 @@ function Sidebar({
   selectedChatroomId,
   onSelectChatroom,
   onOpenCreateRoom,
+  onOpenProfile,
   onOpenChatbot,
   className = '',
 }) {
@@ -20,7 +20,12 @@ function Sidebar({
   return (
     <aside className={`sidebar ${className}`.trim()}>
       <div className="sidebar-top">
-        <div className="sidebar-user">
+        <button
+          type="button"
+          className="sidebar-user"
+          onClick={onOpenProfile}
+          title="個人資料"
+        >
           <Avatar src={userProfile?.photoURL} name={displayName} size="md" />
           <div className="sidebar-user-meta">
             <p className="sidebar-user-name" title={displayName}>{displayName}</p>
@@ -28,16 +33,8 @@ function Sidebar({
               {currentUser?.email}
             </p>
           </div>
-          <button
-            type="button"
-            className="sidebar-icon-btn"
-            title="登出"
-            onClick={() => logout()}
-            aria-label="登出"
-          >
-            ⎋
-          </button>
-        </div>
+          <span className="sidebar-user-gear" aria-hidden>⚙</span>
+        </button>
 
         <button type="button" className="sidebar-new-chat" onClick={onOpenCreateRoom}>
           <span className="plus">＋</span> 新聊天

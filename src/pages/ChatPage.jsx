@@ -5,17 +5,19 @@ import Sidebar from '../components/sidebar/Sidebar';
 import ChatArea from '../components/chat/ChatArea';
 import CreateRoomModal from '../components/sidebar/CreateRoomModal';
 import InviteMemberModal from '../components/sidebar/InviteMemberModal';
+import ProfileModal from '../components/profile/ProfileModal';
 import './ChatPage.css';
 
 const MOBILE_BREAKPOINT = 768;
 
 function ChatPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { chatrooms } = useChatrooms(currentUser?.uid);
 
   const [selectedChatroomId, setSelectedChatroomId] = useState(null);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BREAKPOINT : false,
   );
@@ -55,6 +57,7 @@ function ChatPage() {
         selectedChatroomId={selectedChatroomId}
         onSelectChatroom={handleSelectChatroom}
         onOpenCreateRoom={() => setShowCreateRoom(true)}
+        onOpenProfile={() => setShowProfile(true)}
         className={isMobile ? (sidebarOpen ? 'mobile-open' : 'mobile-closed') : ''}
       />
 
@@ -80,6 +83,13 @@ function ChatPage() {
           currentUser={currentUser}
         />
       )}
+
+      <ProfileModal
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        currentUser={currentUser}
+        userProfile={userProfile}
+      />
     </div>
   );
 }

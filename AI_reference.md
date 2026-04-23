@@ -76,3 +76,21 @@ a brief explanation of why you made those changes and how the logic works.
 - **Firestore 可能提示建立 composite index**：`subscribeToChatrooms` 用 `where('members','array-contains') + orderBy('lastMessageAt')`，第一次執行時 Console 會回傳建索引連結，點開按一下即可。
 - **後續修正（同 Phase）— 移除 `orderBy` 改前端排序**：實測時 sidebar 永遠空白，根因是 composite index 沒建好導致 `onSnapshot` 進入 error callback、UI 把錯誤吞掉。改成 query 只留 `where`，前端用 `lastMessageAt → createdAt` fallback 排序；同時 `useChatrooms` 把 `error` 一路傳到 `ChatroomList`，未來訂閱失敗會直接在側欄顯示錯誤碼，不用每次都翻 DevTools。
 - `npm run build` 通過（637 KB）。
+
+## phase 3 — 使用者個人資料（ImgBB 頭像上傳）
+
+**Prompt**: 進 Phase 3，建立 ImgBB 上傳與個人資料編輯 Modal。
+
+**Location**:
+- `src/services/imgbbService.js` — `uploadImage` / `uploadProfileImage` / `uploadMessageImage`，上傳前先擋掉非圖片、> 32 MB 檔案並拋中文錯誤訊息
+- `src/components/profile/ProfileModal.jsx` + `.css` — 頭像區（點擊換圖、即時 preview、可取消新圖）、username/phone/address 表單、Email readonly，登出按鈕移到這裡（左下紅色 ghost 按鈕）
+- `src/components/sidebar/Sidebar.jsx` + `.css` — 把頂部使用者區塊改成整塊可點按鈕，右邊多一個齒輪；移除原本孤立的「⎋ 登出」圖示
+- `src/pages/ChatPage.jsx` — 新增 `showProfile` state + 掛 `ProfileModal`，把 `userProfile` 傳進去
+
+**Refinement & Explanation**:
+- **登出搬進 ProfileModal**：原計畫 Sidebar 同時放登出和設定，實際操作時容易誤按（登出是破壞性動作）。把登出放到 ProfileModal 底部紅色 ghost 按鈕，使用者必須先「打開設定」才能登出，安全得多，也和主流 IM（Telegram、Messenger）習慣一致。
+- **`URL.createObjectURL` 預覽 + cleanup**：頭像改圖先顯示 preview，儲存時才上傳 ImgBB，取消或 modal 關閉時 `revokeObjectURL` 釋放記憶體（`useEffect` 的 cleanup 處理）。
+- **同時更新 Firebase Auth `displayName` / `photoURL`**：Firestore 是我們的 single source of truth（靠 `userProfile`），但 Auth 端同步寫一次能讓未來若直接讀 `currentUser.displayName` 的地方也拿到正確資料。寫失敗只 `console.warn` 不擋主流程。
+- **ImgBB 前端驗證**：雖然 API 會擋錯誤檔案，但先在前端擋掉 `!file.type.startsWith('image/')` 與 `size > 32 MB`，使用者拿到的錯誤訊息更即時也可以是中文。
+- **denormalized `senderName` / `senderPhoto` 的 trade-off**：使用者改名/頭像後，**歷史訊息的 bubble 不會跟著變**（符合 Phase 2 設計，保留「發送當下」狀態）。未來 Phase 6 block 邏輯看的是 `senderId` 而非 name，不受影響。
+- `npm run build` 通過（642 KB）。

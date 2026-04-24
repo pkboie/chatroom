@@ -4,6 +4,7 @@ import { uploadMessageImage } from '../../services/imgbbService';
 import { sanitizeInput } from '../../utils/sanitize';
 import { MESSAGE_TYPES } from '../../utils/constants';
 import GifPicker from './GifPicker';
+import EmojiPicker from './EmojiPicker';
 import './MessageInput.css';
 
 function MessageInput({
@@ -21,6 +22,7 @@ function MessageInput({
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState('');
   const [gifOpen, setGifOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -29,6 +31,7 @@ function MessageInput({
     setPendingImage(null);
     setImageError('');
     setGifOpen(false);
+    setEmojiOpen(false);
   }, [chatroomId]);
 
   useEffect(() => {
@@ -157,6 +160,23 @@ function MessageInput({
     setImageError('');
   };
 
+  const handleInsertEmoji = (emoji) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setValue((v) => v + emoji);
+      return;
+    }
+    const start = ta.selectionStart ?? value.length;
+    const end = ta.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + emoji + value.slice(end);
+    setValue(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
+
   const handleSelectGif = async (gifUrl) => {
     setGifOpen(false);
     if (!chatroomId || !currentUser || sending) return;
@@ -228,6 +248,13 @@ function MessageInput({
           onClose={() => setGifOpen(false)}
           onSelect={handleSelectGif}
         />
+        <EmojiPicker
+          isOpen={emojiOpen}
+          onClose={() => setEmojiOpen(false)}
+          onSelect={(emoji) => {
+            handleInsertEmoji(emoji);
+          }}
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -254,6 +281,16 @@ function MessageInput({
           aria-label="發送 GIF"
         >
           GIF
+        </button>
+        <button
+          type="button"
+          className="message-input-icon"
+          onClick={() => setEmojiOpen((s) => !s)}
+          disabled={disabled || uploading}
+          title="插入表情符號"
+          aria-label="插入表情符號"
+        >
+          😊
         </button>
         <textarea
           ref={textareaRef}

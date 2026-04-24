@@ -232,3 +232,45 @@ a brief explanation of why you made those changes and how the logic works.
 - **不做「長按顯示 reactor 名單」**：本 Phase 只展計數，`title` 提示「N 位已反應」即可。若要列名單可從 `uids` 陣列配 `usersById` 取 username，留給後續 Phase。
 - **hover trigger 與 ⋯ menu 共用 `.message-bubble-menu` 容器 + `is-open` 規則**：CSS 已經處理 hover 消失問題（Phase 5 修過），reaction trigger 重用同規則不需額外 CSS。
 - `npm run build` 通過（667 KB，CSS 37.1 KB）。
+
+## phase 6 後續修正（follow-ups）
+
+Phase 6.1–6.4 完成後使用者回報三項體感問題，分三個 commit 修正：
+
+### Follow-up 1 — Gemini 429 錯誤訊息
+**Prompt**: Gemini 配額用完時彈出整串 JSON `⚠️ Gemini API 回傳 429：{ "error": { ... } }`，看不懂。
+
+**Location**: [src/services/geminiService.js](src/services/geminiService.js)
+
+**Refinement**:
+- 把 REST error body 用 `JSON.parse` 萃取 `error.message`，`parse` 失敗 fallback 到前 200 字元的 raw text。
+- 分狀態碼映射中文訊息：429 → 「Gemini 免費額度已用完，請稍後再試或到 Google AI Studio 檢查用量」；400 + `API key` 字樣 → 「Gemini API Key 無效...」；403 → 「權限不足或未啟用 Generative Language API」；其他狀態碼用統一格式 `Gemini 錯誤（${status}）：${apiMessage}`。
+- 不露原始 JSON 給使用者；ChatbotModal 原本的 `⚠️ ${err.message}` banner 就直接顯示友善訊息。
+
+### Follow-up 2 — 封鎖 UX（雙向鎖 + 左側紅色標記）
+**Prompt**: 「封鎖雖然雙方都不能訊息，但是點開對方的頭像還是有封鎖選項可以按」+ 希望被封鎖使用者在 sidebar 有紅色標記。
+
+**Location**:
+- [src/components/chat/ChatroomInfoModal.jsx](src/components/chat/ChatroomInfoModal.jsx) + [.css](src/components/chat/ChatroomInfoModal.css)
+- [src/components/sidebar/ChatroomItem.jsx](src/components/sidebar/ChatroomItem.jsx) + [.css](src/components/sidebar/ChatroomItem.css)
+
+**Refinement**:
+- **雙向偵測**：新增 `theyBlockedMe = user?.blockedUsers?.includes(currentUser.uid)`。三種狀態 → 按鈕三種表現：(a) `isBlocked` → 「解除封鎖」可按；(b) `theyBlockedMe && !isBlocked` → disabled + 「對方已封鎖你」+ `.is-locked` 灰底；(c) 正常 → 「封鎖」紅邊框可按。
+- **紅色 pill 標籤**：`.info-member-badge` 兩種 `is-blocked-tag`：`已封鎖` / `對方封鎖你`，讓使用者在成員列表一眼看出誰處於封鎖狀態。
+- **sidebar 紅色封鎖標記**：`ChatroomItem` import `useAuth` 取 `userProfile`，計算 `iBlockedOther || otherBlockedMe` = `showBlockBadge`；頭像外包一層 `.chatroom-item-avatar`（`position: relative`），絕對定位的 18×18 圓形 `🚫` badge 在右下角，並給頭像加 `filter: grayscale(0.7)` 視覺上也暗一截；badge 邊框用 `2px solid var(--bg-secondary)` 與底色融合；`pointer-events: none` 不搶點擊。
+- **為何 sidebar 只判 1:1 私聊**：群聊顯示的是群組圖 / 預設圖，對「誰被封鎖」沒有意義；`isGroup` 時直接跳過判定。
+
+### Follow-up 3 — 輸入時使用 Emoji（Picker）
+**Prompt**: 「emoji 功能正常，但是我想要 emoji 也能在傳訊息的時候使用」。
+
+**Location**:
+- [src/components/chat/EmojiPicker.jsx](src/components/chat/EmojiPicker.jsx) + [.css](src/components/chat/EmojiPicker.css)
+- [src/components/chat/MessageInput.jsx](src/components/chat/MessageInput.jsx)
+
+**Refinement**:
+- **picker 結構**：5 個分類（表情 / 心情 / 手勢 / 愛心 / 其他）約 160 個 emoji，8 欄 grid、340×320 popover、`position: absolute; bottom: 100%`（沿用 GifPicker 相同 anchor 策略、放在 `.message-input` 內），`emojiPickerIn` keyframe 進場動畫；外部點擊 + Esc 關閉。
+- **MessageInput 整合**：新增 `emojiOpen` state（切換聊天室 reset）、GIF 按鈕旁加 `😊` 觸發按鈕；`handleInsertEmoji` 讀 `textareaRef.current.selectionStart` / `selectionEnd`，切片貼入 emoji，`requestAnimationFrame` 等 React 重 render 後 re-focus 並把 caret 移到 emoji 後方（避免游標跳到最前 / 最後）。
+- **不關 picker on select**：使用者常連按多個 emoji；點選後插入但 picker 保持開啟，想關就按空白處或 Esc，與主流 IM 行為一致。
+- **和 6.4 reactions 邏輯區隔**：Reactions 是 metadata（存 `emojis.👍: [uid...]`）、picker 是輸入法，兩條路不共用 list：reactions 只給 8 個常用、picker 給 ~160 個分類完整覆蓋。兩者共用 emoji 字元但走不同 code path。
+- **為何不做最近使用（MRU）**：要額外存 user-level state 或 localStorage，複雜度不對等本 phase 的收益；留給後續。
+- `npm run build` 三次 follow-up 後全部通過（670 KB，CSS 39.0 KB）。

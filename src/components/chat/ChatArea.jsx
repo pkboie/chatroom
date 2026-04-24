@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUsers } from '../../contexts/UsersContext';
 import { useMessages } from '../../hooks/useMessages';
 import { getChatroom } from '../../services/chatroomService';
 import { unsendMessage } from '../../services/messageService';
@@ -8,16 +9,19 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import MessageSearch from './MessageSearch';
 import ImagePreview from './ImagePreview';
+import ChatroomInfoModal from './ChatroomInfoModal';
 import './ChatArea.css';
 
 function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = false }) {
   const { currentUser, userProfile } = useAuth();
+  const { usersById } = useUsers();
   const { messages, loading } = useMessages(chatroomId);
   const [chatroom, setChatroom] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
     if (!chatroomId) {
@@ -40,6 +44,7 @@ function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = fal
     setSearchOpen(false);
     setHighlightedMessageId(null);
     setPreviewImage(null);
+    setInfoOpen(false);
   }, [chatroomId]);
 
   useEffect(() => {
@@ -61,6 +66,36 @@ function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = fal
     setHighlightedMessageId(messageId);
     setSearchOpen(false);
   };
+
+  const myBlocked = useMemo(
+    () => new Set(userProfile?.blockedUsers || []),
+    [userProfile?.blockedUsers],
+  );
+
+  const visibleMessages = useMemo(() => {
+    if (!messages?.length) return messages;
+    return messages.filter((m) => {
+      if (!m.senderId || m.senderId === currentUser?.uid) return true;
+      if (myBlocked.has(m.senderId)) return false;
+      const sender = usersById[m.senderId];
+      if (sender?.blockedUsers?.includes(currentUser?.uid)) return false;
+      return true;
+    });
+  }, [messages, myBlocked, usersById, currentUser?.uid]);
+
+  const privateBlock = useMemo(() => {
+    if (!chatroom || chatroom.type !== 'private') return { disabled: false, reason: '' };
+    const otherUid = (chatroom.members || []).find((uid) => uid !== currentUser?.uid);
+    if (!otherUid) return { disabled: false, reason: '' };
+    if (myBlocked.has(otherUid)) {
+      return { disabled: true, reason: '你已封鎖此用戶，無法繼續對話' };
+    }
+    const other = usersById[otherUid];
+    if (other?.blockedUsers?.includes(currentUser?.uid)) {
+      return { disabled: true, reason: '此用戶已封鎖你，無法繼續對話' };
+    }
+    return { disabled: false, reason: '' };
+  }, [chatroom, currentUser?.uid, myBlocked, usersById]);
 
   if (!chatroomId) {
     return (
@@ -84,11 +119,12 @@ function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = fal
         chatroom={chatroom}
         onOpenInvite={onOpenInvite}
         onOpenSearch={() => setSearchOpen((s) => !s)}
+        onOpenInfo={() => setInfoOpen(true)}
         onMobileMenu={showMobileMenu ? onMobileMenu : undefined}
       />
       <div className="chat-area-body">
         <MessageList
-          messages={messages}
+          messages={visibleMessages}
           loading={loading}
           currentUserId={currentUser?.uid}
           isGroup={chatroom?.type === 'group'}
@@ -100,7 +136,7 @@ function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = fal
         <MessageSearch
           isOpen={searchOpen}
           onClose={() => setSearchOpen(false)}
-          messages={messages}
+          messages={visibleMessages}
           onJump={handleJump}
         />
       </div>
@@ -108,10 +144,17 @@ function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = fal
         chatroomId={chatroomId}
         currentUser={currentUser}
         userProfile={userProfile}
+        disabled={privateBlock.disabled}
+        disabledReason={privateBlock.reason}
         editingMessage={editingMessage}
         onCancelEdit={() => setEditingMessage(null)}
       />
       <ImagePreview src={previewImage} onClose={() => setPreviewImage(null)} />
+      <ChatroomInfoModal
+        isOpen={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        chatroom={chatroom}
+      />
     </div>
   );
 }

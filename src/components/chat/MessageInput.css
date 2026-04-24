@@ -17,6 +17,15 @@
   color: var(--accent-primary);
 }
 
+.message-input-blocked-banner {
+  padding: 10px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.25);
+  color: var(--error);
+  font-size: 13px;
+  text-align: center;
+}
+
 .message-input-edit-banner-label {
   font-weight: 500;
 }

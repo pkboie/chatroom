@@ -10,6 +10,7 @@ function MessageInput({
   currentUser,
   userProfile,
   disabled = false,
+  disabledReason = '',
   editingMessage = null,
   onCancelEdit,
 }) {
@@ -165,6 +166,10 @@ function MessageInput({
 
   return (
     <div className="message-input-wrap">
+      {disabled && disabledReason && (
+        <div className="message-input-blocked-banner">🚫 {disabledReason}</div>
+      )}
+
       {isEditing && (
         <div className="message-input-edit-banner">
           <span className="message-input-edit-banner-label">✏️ 正在編輯訊息</span>

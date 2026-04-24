@@ -4,7 +4,7 @@ import { useUsers } from '../../contexts/UsersContext';
 import { sanitizeInput } from '../../utils/sanitize';
 import './ChatHeader.css';
 
-function ChatHeader({ chatroom, onOpenInvite, onOpenSearch, onMobileMenu }) {
+function ChatHeader({ chatroom, onOpenInvite, onOpenSearch, onOpenInfo, onMobileMenu }) {
   const { currentUser } = useAuth();
   const { usersById } = useUsers();
 
@@ -78,6 +78,17 @@ function ChatHeader({ chatroom, onOpenInvite, onOpenSearch, onMobileMenu }) {
             aria-label="邀請成員"
           >
             ＋
+          </button>
+        )}
+        {onOpenInfo && (
+          <button
+            type="button"
+            className="chat-header-icon"
+            onClick={onOpenInfo}
+            title={isGroup ? '群組資訊' : '聊天資訊'}
+            aria-label="聊天室資訊"
+          >
+            ⓘ
           </button>
         )}
       </div>

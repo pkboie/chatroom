@@ -168,3 +168,24 @@ a brief explanation of why you made those changes and how the logic works.
 - **為什麼不用 `streamGenerateContent`**：streaming 在 UI 上要多寫 reader 迴圈與部分更新，但本需求回應短，直接一次回覆 + `TypingDots` loading 的體感已經足夠，且錯誤處理更簡單。
 - **Scroll lock**：共用 `Modal` 已處理（`body.style.overflow = 'hidden'`），Chatbot 沒重複。
 - `npm run build` 通過（658 KB，僅既有 chunk-size warning）。
+
+## phase 6.2 — Block User
+
+**Prompt**: 進 Phase 6.2，實作封鎖 / 解除封鎖：私聊互鎖時 disable input，群聊互相隱藏訊息。
+
+**Location**:
+- [src/services/userService.js:45-57](src/services/userService.js#L45-L57) — `blockUser` / `unblockUser` 已在 Phase 1 預先寫好（用 `arrayUnion` / `arrayRemove`），本 Phase 直接接上 UI
+- [src/components/chat/ChatroomInfoModal.jsx](src/components/chat/ChatroomInfoModal.jsx) + [.css](src/components/chat/ChatroomInfoModal.css) — 重用 `Modal`（size=md），列出 `chatroom.members` 的每位使用者；非自己的成員旁邊有「封鎖 / 解除封鎖」按鈕，封鎖前 `window.confirm` 二次確認；忙碌中按鈕顯示 `...`，錯誤紅色內聯顯示
+- [src/components/chat/ChatHeader.jsx:73-83](src/components/chat/ChatHeader.jsx#L73-L83) — 新增 `onOpenInfo` prop 與 `ⓘ` 按鈕（依群組 / 私聊切換 title 文案）
+- [src/components/chat/ChatArea.jsx](src/components/chat/ChatArea.jsx) — 接 `useUsers()` 拿 `usersById`；新增 `infoOpen` state、`visibleMessages` memo（過濾雙向封鎖）、`privateBlock` memo（決定 `MessageInput.disabled` 與 banner 文案）；切換聊天室時 reset `infoOpen`
+- [src/components/chat/MessageInput.jsx](src/components/chat/MessageInput.jsx) + [.css](src/components/chat/MessageInput.css) — 新增 `disabledReason` prop，當 `disabled && disabledReason` 時頂端顯示紅色 `🚫 ...` banner（`.message-input-blocked-banner`）
+
+**Refinement & Explanation**:
+- **不另外存「對方封鎖了我」資料**：`UsersContext` 已經 subscribe 全使用者集合並 memo `usersById`，所以可直接讀 `usersById[otherUid].blockedUsers?.includes(currentUid)` 判斷反向封鎖，不需在自身文件 mirror 一份。對方按下「封鎖」後 `onSnapshot` 即時推來，UI 會自動切到 disabled。
+- **群聊雙向過濾**：依 CLAUDE_PLAN「A 看不到 B 的訊息，B 看不到 A 的訊息」，`visibleMessages` 同時檢查 (a) `myBlocked.has(senderId)` 與 (b) `usersById[senderId].blockedUsers?.includes(myUid)`。因此封鎖等同於互相對話 mute。自己的訊息永遠保留（`senderId === currentUser.uid` 早 return true），避免自己看不到自己發過的話。
+- **私聊改 disable + banner，不藏訊息**：歷史訊息對封鎖前的對話仍有意義，藏掉會讓使用者搞不清狀況。改成保留歷史、但禁止繼續發送，並用紅色 banner 講清楚原因（兩種文案：「你已封鎖此用戶」vs「此用戶已封鎖你」）。
+- **`MessageSearch` 也吃 `visibleMessages`**：搜尋結果不會洩漏被封鎖使用者的內容，與聊天視窗一致。
+- **`disabled` + `disabledReason` 解耦**：`disabled` 由現有用法保留（純 disable 行為），`disabledReason` 才會渲染 banner。未來若有其他 disable 場景（例如系統維護、唯讀房）可單獨重用。
+- **二次確認**：封鎖按鈕跳 `window.confirm`，`window.confirm` 取消時 early return 不發 Firestore 請求；解除封鎖則直接執行（破壞性低）。
+- **不重新對 chatroom.members 同步**：封鎖只是過濾顯示，不改動 chatroom 成員陣列，所以群組頁顯示總人數仍是真實成員數。
+- `npm run build` 通過（661 KB）。

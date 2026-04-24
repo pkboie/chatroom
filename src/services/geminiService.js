@@ -36,8 +36,23 @@ export async function chatWithGemini(userMessage, history = []) {
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Gemini API 回傳 ${res.status}：${detail.slice(0, 200)}`);
+    const raw = await res.text().catch(() => '');
+    let apiMessage = '';
+    try {
+      apiMessage = JSON.parse(raw)?.error?.message || '';
+    } catch {
+      apiMessage = raw.slice(0, 200);
+    }
+    if (res.status === 429) {
+      throw new Error('Gemini 免費額度已用完，請稍後再試或到 Google AI Studio 檢查用量');
+    }
+    if (res.status === 400 && /API key/i.test(apiMessage)) {
+      throw new Error('Gemini API Key 無效，請檢查 .env 中的 VITE_GEMINI_API_KEY');
+    }
+    if (res.status === 403) {
+      throw new Error('Gemini API Key 權限不足或未啟用 Generative Language API');
+    }
+    throw new Error(`Gemini 錯誤（${res.status}）：${apiMessage || '未知錯誤'}`);
   }
 
   const data = await res.json();

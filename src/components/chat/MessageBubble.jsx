@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Avatar from '../common/Avatar';
 import { formatTime } from '../../utils/formatTime';
 import { sanitizeInput } from '../../utils/sanitize';
@@ -17,15 +18,36 @@ function MessageBubble({
   const time = formatTime(message.createdAt);
   const senderName = sanitizeInput(message.senderName || '使用者');
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const [menuPos, setMenuPos] = useState(null);
+  const triggerRef = useRef(null);
+  const listRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!menuOpen || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setMenuPos({
+      top: rect.bottom + 4,
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
+  }, [menuOpen]);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen) return undefined;
     const onDocClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      const t = e.target;
+      if (triggerRef.current && triggerRef.current.contains(t)) return;
+      if (listRef.current && listRef.current.contains(t)) return;
+      setMenuOpen(false);
     };
+    const onScrollOrResize = () => setMenuOpen(false);
     document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+    };
   }, [menuOpen]);
 
   const renderContent = () => {
@@ -86,11 +108,9 @@ function MessageBubble({
             {renderContent()}
           </div>
           {canShowMenu && (
-            <div
-              className={`message-bubble-menu ${menuOpen ? 'is-open' : ''}`}
-              ref={menuRef}
-            >
+            <div className={`message-bubble-menu ${menuOpen ? 'is-open' : ''}`}>
               <button
+                ref={triggerRef}
                 type="button"
                 className="message-bubble-menu-trigger"
                 onClick={() => setMenuOpen((s) => !s)}
@@ -99,24 +119,6 @@ function MessageBubble({
               >
                 ⋯
               </button>
-              {menuOpen && (
-                <div className={`message-bubble-menu-list ${isSelf ? 'is-self' : ''}`}>
-                  {canEdit && (
-                    <button type="button" className="message-bubble-menu-item" onClick={handleEdit}>
-                      ✏️ 編輯
-                    </button>
-                  )}
-                  {onUnsend && (
-                    <button
-                      type="button"
-                      className="message-bubble-menu-item is-danger"
-                      onClick={handleUnsend}
-                    >
-                      🗑 收回
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -125,6 +127,31 @@ function MessageBubble({
           {message.isEdited && !message.isUnsent && <span className="edited-tag">（已編輯）</span>}
         </p>
       </div>
+
+      {canShowMenu && menuOpen && menuPos &&
+        createPortal(
+          <div
+            ref={listRef}
+            className="message-bubble-menu-list"
+            style={{ top: menuPos.top, right: menuPos.right }}
+          >
+            {canEdit && (
+              <button type="button" className="message-bubble-menu-item" onClick={handleEdit}>
+                ✏️ 編輯
+              </button>
+            )}
+            {onUnsend && (
+              <button
+                type="button"
+                className="message-bubble-menu-item is-danger"
+                onClick={handleUnsend}
+              >
+                🗑 收回
+              </button>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

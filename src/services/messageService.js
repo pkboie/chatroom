@@ -2,6 +2,8 @@ import {
   addDoc,
   collection,
   doc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -10,6 +12,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { MESSAGE_TYPES } from '../utils/constants';
+
+const UNSENT_PREVIEW = '訊息已收回';
 
 const messagesCol = (chatroomId) => collection(db, 'chatrooms', chatroomId, 'messages');
 const messageDoc = (chatroomId, messageId) => doc(db, 'chatrooms', chatroomId, 'messages', messageId);
@@ -60,4 +64,13 @@ export async function unsendMessage(chatroomId, messageId) {
     isUnsent: true,
     updatedAt: serverTimestamp(),
   });
+
+  const latestQ = query(messagesCol(chatroomId), orderBy('createdAt', 'desc'), limit(1));
+  const latestSnap = await getDocs(latestQ);
+  const latest = latestSnap.docs[0];
+  if (latest && latest.id === messageId) {
+    await updateDoc(chatroomDoc(chatroomId), {
+      lastMessage: UNSENT_PREVIEW,
+    });
+  }
 }

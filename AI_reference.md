@@ -210,3 +210,25 @@ a brief explanation of why you made those changes and how the logic works.
 - **「Powered by GIPHY」footer**：GIPHY 條款 4.4 要求 attribution 可見。Footer 用較小字 + uppercase 處理，不搶版面。
 - **預留：`getTrendingGifs(opts)` 已支援 limit**：後續若要做 infinite scroll，picker body 加 IntersectionObserver 追加結果即可。本 Phase 先不做。
 - `npm run build` 通過（664 KB，CSS 從 33.5 KB 漲到 35.8 KB）。
+
+## phase 6.4 — Emoji Reactions
+
+**Prompt**: 進 Phase 6.4，實作快速 emoji 反應：bubble hover 出現 8 個 emoji 選單，點擊 toggle；氣泡下方顯示計數。
+
+**Location**:
+- [src/services/messageService.js](src/services/messageService.js) — 新增 `addReaction(chatroomId, messageId, emoji, userId)` 與 `removeReaction(...)`；都走 `arrayUnion` / `arrayRemove` 的 field-path 語法 `emojis.${emoji}`，不會污染其他 emoji 的陣列
+- [src/components/chat/MessageBubble.jsx](src/components/chat/MessageBubble.jsx) + [.css](src/components/chat/MessageBubble.css) — 新增 `☺` 快速反應 trigger（放在 ⋯ 選單前面）、portal 進 `document.body` 的 8-emoji 橫條 popover（`.message-bubble-react-bar`）、氣泡下方的 reaction pills（`.message-bubble-reactions`）；使用者已反應的 pill 會帶 `is-reacted` class（紫色邊框 + 淡底）
+- [src/components/chat/MessageList.jsx](src/components/chat/MessageList.jsx) — 新增 `onToggleReaction` / `currentUserId` 兩個 props 往下傳給 `MessageBubble`
+- [src/components/chat/ChatArea.jsx](src/components/chat/ChatArea.jsx) — 新增 `handleToggleReaction` 判斷 `message.emojis[emoji]` 是否包含當前 uid，呼叫對應的 add / remove service
+- `src/utils/constants.js` — `EMOJI_LIST` 陣列在 Phase 0 已經預定義好（👍 ❤️ 😂 😮 😢 😡 🔥 👏），本 Phase 直接使用
+
+**Refinement & Explanation**:
+- **data shape**：`message.emojis` 在 Phase 2 `sendMessage` 就預設是 `{}`。本 Phase 用 field-path `emojis.👍 = arrayUnion(uid)`，Firestore 會自動建立該欄位與空陣列並加入 uid；不同 emoji 之間互相獨立。
+- **為何兩個 API 而不是一個 toggle**：Firestore 沒有原生 "toggle array element"，需要先讀當前值才知道要 union 還是 remove。把判斷放在 UI 層（`message.emojis[emoji].includes(uid)`）然後呼叫對應 service，比在 service 層多一次 `getDoc` 省一個 round-trip，也讓 UI 有即時 optimistic feedback（Firestore onSnapshot 會很快推回真實狀態）。
+- **portal react bar 定位**：沿用 Phase 5 修好的 ⋯ menu pattern — `useLayoutEffect` 讀 `getBoundingClientRect()`、`position: fixed`、scroll / resize 時自動關閉、dual-ref 外部點擊判定（trigger + bar 兩個不同 subtree）。bar 定位在 trigger 上方 48px 左右偏 80px，8 顆 emoji 橫排不會擋到 bubble。
+- **自己也能對自己的訊息 reaction**：和主流 IM（Messenger / Slack）一致；不擋 `isSelf`。
+- **被收回的訊息不可反應**：`canReact = !message.isUnsent && !!onToggleReaction`，收回後連 `☺` trigger 都不渲染，既有的 reaction pills 仍保留（歷史資料不強制清）。
+- **pill 點擊也 toggle**：使用者若已反應過，直接點氣泡下方的 pill 取消；不用再開快速反應條。`is-reacted` 視覺態讓使用者知道自己已投過。
+- **不做「長按顯示 reactor 名單」**：本 Phase 只展計數，`title` 提示「N 位已反應」即可。若要列名單可從 `uids` 陣列配 `usersById` 取 username，留給後續 Phase。
+- **hover trigger 與 ⋯ menu 共用 `.message-bubble-menu` 容器 + `is-open` 規則**：CSS 已經處理 hover 消失問題（Phase 5 修過），reaction trigger 重用同規則不需額外 CSS。
+- `npm run build` 通過（667 KB，CSS 37.1 KB）。

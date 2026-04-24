@@ -3,7 +3,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUsers } from '../../contexts/UsersContext';
 import { useMessages } from '../../hooks/useMessages';
 import { getChatroom } from '../../services/chatroomService';
-import { unsendMessage } from '../../services/messageService';
+import {
+  addReaction,
+  removeReaction,
+  unsendMessage,
+} from '../../services/messageService';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -65,6 +69,20 @@ function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = fal
   const handleJump = (messageId) => {
     setHighlightedMessageId(messageId);
     setSearchOpen(false);
+  };
+
+  const handleToggleReaction = async (message, emoji) => {
+    if (!currentUser?.uid || !chatroomId) return;
+    const uids = message.emojis?.[emoji] || [];
+    try {
+      if (uids.includes(currentUser.uid)) {
+        await removeReaction(chatroomId, message.id, emoji, currentUser.uid);
+      } else {
+        await addReaction(chatroomId, message.id, emoji, currentUser.uid);
+      }
+    } catch (err) {
+      console.error('toggleReaction:', err);
+    }
   };
 
   const myBlocked = useMemo(
@@ -132,6 +150,7 @@ function ChatArea({ chatroomId, onOpenInvite, onMobileMenu, showMobileMenu = fal
           onEdit={setEditingMessage}
           onUnsend={handleUnsend}
           onImageClick={setPreviewImage}
+          onToggleReaction={handleToggleReaction}
         />
         <MessageSearch
           isOpen={searchOpen}

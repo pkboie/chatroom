@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import Avatar from '../common/Avatar';
 import { formatTime } from '../../utils/formatTime';
 import { sanitizeInput } from '../../utils/sanitize';
-import { MESSAGE_TYPES } from '../../utils/constants';
+import { EMOJI_LIST, MESSAGE_TYPES } from '../../utils/constants';
 import './MessageBubble.css';
 
 function MessageBubble({
@@ -11,16 +11,22 @@ function MessageBubble({
   isSelf,
   showSender,
   isHighlighted = false,
+  currentUserId,
   onEdit,
   onUnsend,
   onImageClick,
+  onToggleReaction,
 }) {
   const time = formatTime(message.createdAt);
   const senderName = sanitizeInput(message.senderName || '使用者');
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState(null);
+  const [reactOpen, setReactOpen] = useState(false);
+  const [reactPos, setReactPos] = useState(null);
   const triggerRef = useRef(null);
   const listRef = useRef(null);
+  const reactTriggerRef = useRef(null);
+  const reactBarRef = useRef(null);
 
   useLayoutEffect(() => {
     if (!menuOpen || !triggerRef.current) return;
@@ -30,6 +36,15 @@ function MessageBubble({
       right: Math.max(8, window.innerWidth - rect.right),
     });
   }, [menuOpen]);
+
+  useLayoutEffect(() => {
+    if (!reactOpen || !reactTriggerRef.current) return;
+    const rect = reactTriggerRef.current.getBoundingClientRect();
+    setReactPos({
+      top: Math.max(8, rect.top - 48),
+      left: Math.max(8, rect.left - 80),
+    });
+  }, [reactOpen]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -49,6 +64,25 @@ function MessageBubble({
       window.removeEventListener('scroll', onScrollOrResize, true);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!reactOpen) return undefined;
+    const onDocClick = (e) => {
+      const t = e.target;
+      if (reactTriggerRef.current && reactTriggerRef.current.contains(t)) return;
+      if (reactBarRef.current && reactBarRef.current.contains(t)) return;
+      setReactOpen(false);
+    };
+    const onScrollOrResize = () => setReactOpen(false);
+    document.addEventListener('mousedown', onDocClick);
+    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+    };
+  }, [reactOpen]);
 
   const renderContent = () => {
     if (message.isUnsent) {
@@ -79,6 +113,7 @@ function MessageBubble({
 
   const canShowMenu = isSelf && !message.isUnsent && (onEdit || onUnsend);
   const canEdit = onEdit && message.type === MESSAGE_TYPES.TEXT;
+  const canReact = !message.isUnsent && !!onToggleReaction;
 
   const handleEdit = () => {
     setMenuOpen(false);
@@ -91,6 +126,18 @@ function MessageBubble({
       onUnsend?.(message);
     }
   };
+
+  const handlePickReaction = (emoji) => {
+    setReactOpen(false);
+    onToggleReaction?.(message, emoji);
+  };
+
+  const reactionEntries = (() => {
+    const emojis = message.emojis || {};
+    return Object.entries(emojis)
+      .map(([emoji, uids]) => ({ emoji, uids: Array.isArray(uids) ? uids : [] }))
+      .filter((e) => e.uids.length > 0);
+  })();
 
   return (
     <div className={`message-row ${isSelf ? 'is-self' : ''}`}>
@@ -107,6 +154,20 @@ function MessageBubble({
           >
             {renderContent()}
           </div>
+          {canReact && (
+            <div className={`message-bubble-menu ${reactOpen ? 'is-open' : ''}`}>
+              <button
+                ref={reactTriggerRef}
+                type="button"
+                className="message-bubble-menu-trigger"
+                onClick={() => setReactOpen((s) => !s)}
+                aria-label="快速反應"
+                title="快速反應"
+              >
+                ☺
+              </button>
+            </div>
+          )}
           {canShowMenu && (
             <div className={`message-bubble-menu ${menuOpen ? 'is-open' : ''}`}>
               <button
@@ -122,6 +183,26 @@ function MessageBubble({
             </div>
           )}
         </div>
+        {reactionEntries.length > 0 && (
+          <div className="message-bubble-reactions">
+            {reactionEntries.map(({ emoji, uids }) => {
+              const reacted = currentUserId && uids.includes(currentUserId);
+              return (
+                <button
+                  key={emoji}
+                  type="button"
+                  className={`message-bubble-reaction ${reacted ? 'is-reacted' : ''}`}
+                  onClick={() => onToggleReaction?.(message, emoji)}
+                  disabled={!onToggleReaction}
+                  title={`${uids.length} 位已反應`}
+                >
+                  <span className="message-bubble-reaction-emoji">{emoji}</span>
+                  <span className="message-bubble-reaction-count">{uids.length}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         <p className="message-bubble-meta">
           {time}
           {message.isEdited && !message.isUnsent && <span className="edited-tag">（已編輯）</span>}
@@ -149,6 +230,28 @@ function MessageBubble({
                 🗑 收回
               </button>
             )}
+          </div>,
+          document.body,
+        )}
+
+      {canReact && reactOpen && reactPos &&
+        createPortal(
+          <div
+            ref={reactBarRef}
+            className="message-bubble-react-bar"
+            style={{ top: reactPos.top, left: reactPos.left }}
+          >
+            {EMOJI_LIST.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                className="message-bubble-react-btn"
+                onClick={() => handlePickReaction(emoji)}
+                aria-label={`以 ${emoji} 反應`}
+              >
+                {emoji}
+              </button>
+            ))}
           </div>,
           document.body,
         )}

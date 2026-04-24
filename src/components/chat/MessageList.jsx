@@ -29,6 +29,7 @@ function MessageList({
   onEdit,
   onUnsend,
   onImageClick,
+  onToggleReaction,
 }) {
   const endRef = useRef(null);
   const containerRef = useRef(null);
@@ -82,9 +83,11 @@ function MessageList({
               isSelf={msg.senderId === currentUserId}
               showSender={isGroup && msg.senderId !== currentUserId}
               isHighlighted={highlightedMessageId === msg.id}
+              currentUserId={currentUserId}
               onEdit={onEdit}
               onUnsend={onUnsend}
               onImageClick={onImageClick}
+              onToggleReaction={onToggleReaction}
             />
           </div>
         );

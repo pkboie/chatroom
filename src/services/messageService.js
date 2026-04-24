@@ -1,5 +1,7 @@
 import {
   addDoc,
+  arrayRemove,
+  arrayUnion,
   collection,
   doc,
   getDocs,
@@ -56,6 +58,18 @@ export async function editMessage(chatroomId, messageId, newContent) {
     content: newContent,
     isEdited: true,
     updatedAt: serverTimestamp(),
+  });
+}
+
+export async function addReaction(chatroomId, messageId, emoji, userId) {
+  await updateDoc(messageDoc(chatroomId, messageId), {
+    [`emojis.${emoji}`]: arrayUnion(userId),
+  });
+}
+
+export async function removeReaction(chatroomId, messageId, emoji, userId) {
+  await updateDoc(messageDoc(chatroomId, messageId), {
+    [`emojis.${emoji}`]: arrayRemove(userId),
   });
 }
 

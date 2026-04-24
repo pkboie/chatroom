@@ -3,6 +3,7 @@ import { sendMessage, editMessage } from '../../services/messageService';
 import { uploadMessageImage } from '../../services/imgbbService';
 import { sanitizeInput } from '../../utils/sanitize';
 import { MESSAGE_TYPES } from '../../utils/constants';
+import GifPicker from './GifPicker';
 import './MessageInput.css';
 
 function MessageInput({
@@ -19,6 +20,7 @@ function MessageInput({
   const [pendingImage, setPendingImage] = useState(null); // { file, previewUrl }
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState('');
+  const [gifOpen, setGifOpen] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -26,6 +28,7 @@ function MessageInput({
     setValue('');
     setPendingImage(null);
     setImageError('');
+    setGifOpen(false);
   }, [chatroomId]);
 
   useEffect(() => {
@@ -154,6 +157,25 @@ function MessageInput({
     setImageError('');
   };
 
+  const handleSelectGif = async (gifUrl) => {
+    setGifOpen(false);
+    if (!chatroomId || !currentUser || sending) return;
+    setSending(true);
+    try {
+      await sendMessage(chatroomId, {
+        type: MESSAGE_TYPES.GIF,
+        content: gifUrl,
+        senderId: currentUser.uid,
+        senderName: userProfile?.username || currentUser.displayName || '使用者',
+        senderPhoto: userProfile?.photoURL || currentUser.photoURL || '',
+      });
+    } catch (err) {
+      console.error('sendGif:', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const sendDisabled =
     disabled ||
     sending ||
@@ -201,6 +223,11 @@ function MessageInput({
       {imageError && <p className="message-input-error">{imageError}</p>}
 
       <div className="message-input">
+        <GifPicker
+          isOpen={gifOpen}
+          onClose={() => setGifOpen(false)}
+          onSelect={handleSelectGif}
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -217,6 +244,16 @@ function MessageInput({
           aria-label="附加圖片"
         >
           📎
+        </button>
+        <button
+          type="button"
+          className="message-input-icon message-input-gif-btn"
+          onClick={() => setGifOpen((s) => !s)}
+          disabled={disabled || isEditing || uploading || sending}
+          title={isEditing ? '編輯模式不可發送 GIF' : '發送 GIF'}
+          aria-label="發送 GIF"
+        >
+          GIF
         </button>
         <textarea
           ref={textareaRef}

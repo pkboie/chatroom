@@ -189,3 +189,24 @@ a brief explanation of why you made those changes and how the logic works.
 - **二次確認**：封鎖按鈕跳 `window.confirm`，`window.confirm` 取消時 early return 不發 Firestore 請求；解除封鎖則直接執行（破壞性低）。
 - **不重新對 chatroom.members 同步**：封鎖只是過濾顯示，不改動 chatroom 成員陣列，所以群組頁顯示總人數仍是真實成員數。
 - `npm run build` 通過（661 KB）。
+
+## phase 6.3 — GIF Picker (GIPHY)
+
+**Prompt**: 進 Phase 6.3，整合 GIPHY，MessageInput 加 GIF 按鈕、popover 選單、發送 type=gif 訊息。
+
+**Location**:
+- [src/services/giphyService.js](src/services/giphyService.js) — `searchGifs(query, opts)` / `getTrendingGifs(opts)` / `isGiphyConfigured()`；rating=g、bundle=`messaging_non_clips`（GIPHY 的「適合 IM 的尺寸子集」回傳體積較小）；空 query 走 trending、有 query 走 search；錯誤統一拋 `Error`
+- [src/components/chat/GifPicker.jsx](src/components/chat/GifPicker.jsx) + [.css](src/components/chat/GifPicker.css) — popover panel（380 寬 × 420 高），搜尋 input + 2 欄 grid（`fixed_height` 縮圖）+ 「Powered by GIPHY」footer；input 變更 350 ms debounce 才打 API；外部點擊與 Esc 關閉；`<img loading="lazy">` 減少首屏負擔；`gifPickerIn` keyframe 進場動畫
+- [src/components/chat/MessageInput.jsx](src/components/chat/MessageInput.jsx) + [.css](src/components/chat/MessageInput.css) — 在 📎 旁邊加「GIF」按鈕（`message-input-gif-btn` 變體：較小字、字重 700）；點擊 toggle `gifOpen`；切換聊天室 reset；選中 GIF 呼叫 `handleSelectGif` 直接走 `sendMessage` type=GIF（不上傳圖檔，直接存 GIPHY 提供的 URL）；`.message-input` 改為 `position: relative` 讓 picker 用 `bottom: 100%` 浮在輸入列正上方
+- `.env` — 已有 `VITE_GIPHY_API_KEY`（32 chars，從 GIPHY developers 申請）
+
+**Refinement & Explanation**:
+- **不過 ImgBB 中轉**：GIPHY URL 已經是 CDN 託管且 GIPHY 條款允許 hot-link，自己再上傳一份既浪費也違反 best practice。直接把 `images.fixed_height.url` 存進 `message.content`，MessageBubble 渲染 type=GIF 時當圖片顯示。
+- **`bundle: 'messaging_non_clips'`**：GIPHY 提供的「IM 場景子集」，回傳體積較小、剔除 clip 類資產，搭配 `fixed_height` (200px tall) 在 picker 載入快、訊息氣泡也夠清晰。`rating=g` 過濾為一般大眾級避免 NSFW。
+- **搜尋 debounce 350 ms**：GIPHY beta key 限額 100 req/hr，input 不 debounce 會每打一個字就送一次。空字串時直接打 trending 不 debounce（使用者明確 clear）。
+- **不存歷史 / 不快取**：picker 每次開都重新打 API，trending 結果通常 GIPHY CDN 自己有快取。本地快取省下的請求數有限、卻會讓 UI 變舊。
+- **anchor 用 `position: absolute` + `bottom: 100%`**：把 picker 放在 `.message-input` 內部、`.message-input` 改 `position: relative`，picker 自然浮在輸入列上方左對齊；不用 portal，因為 input 區域上方沒有 overflow / stacking 問題。
+- **GIF 訊息封鎖也適用**：私聊封鎖時 MessageInput 整體 disable，GIF 按鈕也跟著 disabled；群聊封鎖過濾走 `visibleMessages`，GIF 訊息和文字一視同仁被過濾。
+- **「Powered by GIPHY」footer**：GIPHY 條款 4.4 要求 attribution 可見。Footer 用較小字 + uppercase 處理，不搶版面。
+- **預留：`getTrendingGifs(opts)` 已支援 limit**：後續若要做 infinite scroll，picker body 加 IntersectionObserver 追加結果即可。本 Phase 先不做。
+- `npm run build` 通過（664 KB，CSS 從 33.5 KB 漲到 35.8 KB）。

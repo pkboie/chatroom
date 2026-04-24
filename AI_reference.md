@@ -148,3 +148,23 @@ a brief explanation of why you made those changes and how the logic works.
 - **後續修正（同 Phase）— 修復收回後 sidebar 預覽未更新 + bubble 選單按不下去**：上一輪修好「選單不消失」後，使用者回報兩個連帶 bug：(1) 收回最新訊息後，左側 sidebar 的預覽仍顯示原文；(2) 下拉選單雖然看得到但點不到，游標移過去沒反應。
   - **Sidebar preview 未更新**：`unsendMessage` 只翻 message 文件的 `isUnsent` flag，但 `chatroom.lastMessage` 是 Phase 2 為了省讀取而 denormalize 的欄位，沒跟著改。修法：[src/services/messageService.js:62-76](src/services/messageService.js#L62-L76) 的 `unsendMessage` 加上 post-update 驗證 — 用 `orderBy('createdAt','desc'), limit(1)` 撈目前最新一則，若 id 等於被收回的 messageId，就把 `chatroom.lastMessage` 覆寫成常數 `UNSENT_PREVIEW = '訊息已收回'`；若不是最新則（例如收回的是舊訊息），sidebar 預覽不需要動。現有的 `subscribeToChatrooms` 訂閱會自動把變更推到 `ChatroomItem`，無需改 UI。
   - **選單按不下去**：根因是 `.message-list { overflow-y: auto }` 結合 sibling `.message-bubble-stack` 的 `position: relative` stacking context，導致絕對定位的 `.message-bubble-menu-list` 即使視覺在上層，pointer events 仍被同層 bubble 吞掉（或被 overflow clip 切掉命中區域）。修法：[src/components/chat/MessageBubble.jsx](src/components/chat/MessageBubble.jsx) 用 `createPortal` 把下拉清單搬到 `document.body`，配 `position: fixed` + `useLayoutEffect` 同步讀 `getBoundingClientRect()` 算 `top` / `right` 內聯樣式；外部點擊判定同時檢查 `triggerRef` 與 `listRef`（兩者現在不同 subtree）；加 scroll / resize listener 自動關閉，避免 portal 飄離觸發按鈕。[src/components/chat/MessageBubble.css:133-146](src/components/chat/MessageBubble.css#L133-L146) 改 `position: fixed` + `z-index: 2000` 浮到 app chrome 之上，移除舊的 `.is-self` 變體規則（portal 後位置統一用 inline style）。`npm run build` 通過。
+
+## phase 6.1 — AI Chatbot (Gemini)
+
+**Prompt**: 進 Phase 6.1，實作側邊欄 🤖 AI 助手 Chatbot（用 Gemini API）。
+
+**Location**:
+- [src/services/geminiService.js](src/services/geminiService.js) — 封裝 `gemini-2.0-flash` REST endpoint，匯出 `chatWithGemini(userMessage, history)` + `isGeminiConfigured()`；帶 `systemInstruction`（繁中簡潔助手）、`generationConfig`（temperature 0.7 / maxOutputTokens 1024）；錯誤分類（API 非 2xx、finishReason=SAFETY、空回應）
+- [src/components/chatbot/ChatbotModal.jsx](src/components/chatbot/ChatbotModal.jsx) + [.css](src/components/chatbot/ChatbotModal.css) — 重用 `Modal`（size=lg），對話列表 + textarea 輸入 + 送出鈕；AI 左側 🤖，使用者右側 🙂；傳送中顯示 `<TypingDots>`；錯誤用紅色 inline 條；清空對話按鈕放 `modal-footer`；訊息陣列只存在元件 state（不寫 Firestore）；Enter 送、Shift+Enter 換行、ESC 關閉（Modal 已處理）
+- [src/pages/ChatPage.jsx](src/pages/ChatPage.jsx) — 新增 `showChatbot` state，傳 `onOpenChatbot` 給 `Sidebar`，掛 `<ChatbotModal>`；Sidebar 的 🤖 按鈕原本是 placeholder（`disabled={!onOpenChatbot}`），現在接上 callback 自動變可用
+- `.env` — 填入 `VITE_GEMINI_API_KEY`（39 chars，從 Google AI Studio 申請）
+
+**Refinement & Explanation**:
+- **為何用 REST 而非 `@google/generative-ai` SDK**：SDK 會再拉一個 ~20KB 依賴，而 Gemini REST 呼叫只需 `fetch` + JSON，自己寫只要 ~50 行且對參數更透明。未來若要切 streaming 或 function calling 再考慮導 SDK。
+- **對話歷史格式**：Gemini 要求 `contents` 陣列裡 role 只能是 `'user'` 或 `'model'`（不是 `'ai'` 或 `'assistant'`），`chatWithGemini` 內部把本地用的 `role: 'ai'` 轉成 `'model'`。歡迎訊息 `WELCOME` 是純 UI 項，不送進 history（`.filter((m) => m !== WELCOME)`），避免每次對話都把它當成 model 第一句話。
+- **歷史只存 state**：依計畫要求不寫 Firestore。`setMessages([WELCOME])` 可清空重啟對話。Modal 關閉不清空 — 使用者重開對話可接著問，但重整頁面就會重置（純 client-side）。
+- **錯誤時還原輸入**：若 API 失敗，把剛加進 state 的 user message pop 掉並把文字放回 textarea，使用者不用重打。
+- **SAFETY finishReason 特別處理**：Gemini 安全過濾器擋下時不會報 HTTP 錯誤而是回 empty candidate；`candidates[0].finishReason === 'SAFETY'` 時丟較友善的中文錯誤。
+- **為什麼不用 `streamGenerateContent`**：streaming 在 UI 上要多寫 reader 迴圈與部分更新，但本需求回應短，直接一次回覆 + `TypingDots` loading 的體感已經足夠，且錯誤處理更簡單。
+- **Scroll lock**：共用 `Modal` 已處理（`body.style.overflow = 'hidden'`），Chatbot 沒重複。
+- `npm run build` 通過（658 KB，僅既有 chunk-size warning）。

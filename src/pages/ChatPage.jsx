@@ -7,6 +7,7 @@ import ChatArea from '../components/chat/ChatArea';
 import CreateRoomModal from '../components/sidebar/CreateRoomModal';
 import InviteMemberModal from '../components/sidebar/InviteMemberModal';
 import ProfileModal from '../components/profile/ProfileModal';
+import ChatbotModal from '../components/chatbot/ChatbotModal';
 import NotificationToast from '../components/common/NotificationToast';
 import './ChatPage.css';
 
@@ -22,6 +23,7 @@ function ChatPage() {
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showChatbot, setShowChatbot] = useState(false);
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BREAKPOINT : false,
   );
@@ -112,6 +114,7 @@ function ChatPage() {
         onSelectChatroom={handleSelectChatroom}
         onOpenCreateRoom={() => setShowCreateRoom(true)}
         onOpenProfile={() => setShowProfile(true)}
+        onOpenChatbot={() => setShowChatbot(true)}
         className={isMobile ? (sidebarOpen ? 'mobile-open' : 'mobile-closed') : ''}
       />
 
@@ -143,6 +146,11 @@ function ChatPage() {
         onClose={() => setShowProfile(false)}
         currentUser={currentUser}
         userProfile={userProfile}
+      />
+
+      <ChatbotModal
+        isOpen={showChatbot}
+        onClose={() => setShowChatbot(false)}
       />
 
       <NotificationToast

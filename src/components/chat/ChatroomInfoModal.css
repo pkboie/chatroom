@@ -92,6 +92,27 @@
   cursor: not-allowed;
 }
 
+.info-member-block-btn.is-locked {
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.info-member-badge {
+  margin-left: 8px;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.info-member-badge.is-blocked-tag {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
 .info-error {
   font-size: 13px;
   color: var(--error);

@@ -47,6 +47,16 @@ function ChatroomInfoModal({ isOpen, onClose, chatroom }) {
     const user = usersById[uid];
     const name = sanitizeInput(user?.username || '使用者');
     const isBlocked = blockedSet.has(uid);
+    const theyBlockedMe = Boolean(
+      currentUser?.uid && user?.blockedUsers?.includes(currentUser.uid),
+    );
+    const buttonDisabled = busyUid === uid || (!isBlocked && theyBlockedMe);
+    const buttonLabel = (() => {
+      if (busyUid === uid) return '...';
+      if (isBlocked) return '解除封鎖';
+      if (theyBlockedMe) return '對方已封鎖你';
+      return '封鎖';
+    })();
 
     return (
       <li key={uid} className="info-member-row">
@@ -55,6 +65,12 @@ function ChatroomInfoModal({ isOpen, onClose, chatroom }) {
           <p className="info-member-name">
             {name}
             {isSelf && <span className="info-member-self-tag">（你）</span>}
+            {!isSelf && isBlocked && (
+              <span className="info-member-badge is-blocked-tag">已封鎖</span>
+            )}
+            {!isSelf && !isBlocked && theyBlockedMe && (
+              <span className="info-member-badge is-blocked-tag">對方封鎖你</span>
+            )}
           </p>
           <p className="info-member-email" title={user?.email || ''}>
             {user?.email || ''}
@@ -63,11 +79,12 @@ function ChatroomInfoModal({ isOpen, onClose, chatroom }) {
         {!isSelf && (
           <button
             type="button"
-            className={`info-member-block-btn ${isBlocked ? 'is-blocked' : ''}`}
+            className={`info-member-block-btn ${isBlocked ? 'is-blocked' : ''} ${theyBlockedMe && !isBlocked ? 'is-locked' : ''}`}
             onClick={() => handleToggleBlock(uid)}
-            disabled={busyUid === uid}
+            disabled={buttonDisabled}
+            title={theyBlockedMe && !isBlocked ? '對方已封鎖你，無需再封鎖' : undefined}
           >
-            {busyUid === uid ? '...' : isBlocked ? '解除封鎖' : '封鎖'}
+            {buttonLabel}
           </button>
         )}
       </li>

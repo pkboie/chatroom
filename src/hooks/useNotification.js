@@ -4,6 +4,7 @@ import { db } from '../config/firebase';
 import { isNotificationSupported, showNotification } from '../services/notificationService';
 import { sanitizeInput } from '../utils/sanitize';
 import { MESSAGE_TYPES } from '../utils/constants';
+import { useNotificationMuted } from './useNotificationMuted';
 
 const previewFor = (type, content) => {
   if (type === MESSAGE_TYPES.IMAGE) return '[圖片]';
@@ -27,9 +28,11 @@ export function useNotification({
   onClickChatroom,
   onNotify,
 }) {
+  const [muted] = useNotificationMuted();
   const activeRef = useRef(activeChatroomId);
   const onClickRef = useRef(onClickChatroom);
   const onNotifyRef = useRef(onNotify);
+  const mutedRef = useRef(muted);
 
   useEffect(() => {
     activeRef.current = activeChatroomId;
@@ -42,6 +45,10 @@ export function useNotification({
   useEffect(() => {
     onNotifyRef.current = onNotify;
   }, [onNotify]);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   // Subscribe per-chatroom. Re-run only when the set of chatroom ids actually
   // changes (not on every chatrooms list reorder).
@@ -82,6 +89,8 @@ export function useNotification({
             if (msg.senderId === currentUserId) return;
             if (msg.isUnsent) return;
             if (room.id === activeRef.current && document.hasFocus()) return;
+            // User toggled the bell off — suppress both toast & browser notif.
+            if (mutedRef.current) return;
 
             const senderName = sanitizeInput(msg.senderName || '訊息');
             const body = previewFor(msg.type, msg.content);

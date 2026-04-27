@@ -4,7 +4,9 @@ import {
   arrayUnion,
   collection,
   doc,
+  getDoc,
   getDocs,
+  increment,
   limit,
   onSnapshot,
   orderBy,
@@ -40,9 +42,29 @@ export async function sendMessage(chatroomId, messageData) {
     updatedAt: serverTimestamp(),
   };
   await addDoc(messagesCol(chatroomId), payload);
-  await updateDoc(chatroomDoc(chatroomId), {
+
+  const updates = {
     lastMessage: previewFor(payload.type, payload.content),
     lastMessageAt: serverTimestamp(),
+  };
+
+  // Bump unread count for every member except the sender. Read members
+  // off the chatroom doc; missing field → no recipients to notify.
+  const roomSnap = await getDoc(chatroomDoc(chatroomId));
+  const members = roomSnap.exists() ? (roomSnap.data().members || []) : [];
+  members.forEach((uid) => {
+    if (uid && uid !== payload.senderId) {
+      updates[`unreadCounts.${uid}`] = increment(1);
+    }
+  });
+
+  await updateDoc(chatroomDoc(chatroomId), updates);
+}
+
+export async function markChatroomRead(chatroomId, userId) {
+  if (!chatroomId || !userId) return;
+  await updateDoc(chatroomDoc(chatroomId), {
+    [`unreadCounts.${userId}`]: 0,
   });
 }
 

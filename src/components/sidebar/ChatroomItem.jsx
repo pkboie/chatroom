@@ -35,11 +35,13 @@ function ChatroomItem({ chatroom, currentUserId, isSelected, onClick }) {
 
   const lastMessage = sanitizeInput(chatroom.lastMessage || '');
   const time = formatTime(chatroom.lastMessageAt);
+  const unreadCount = currentUserId ? chatroom.unreadCounts?.[currentUserId] || 0 : 0;
+  const hasUnread = unreadCount > 0 && !isSelected;
 
   return (
     <button
       type="button"
-      className={`chatroom-item ${isSelected ? 'is-selected' : ''}`}
+      className={`chatroom-item ${isSelected ? 'is-selected' : ''} ${hasUnread ? 'is-unread' : ''}`}
       onClick={onClick}
     >
       <div className={`chatroom-item-avatar ${showBlockBadge ? 'is-blocked' : ''}`}>
@@ -58,9 +60,20 @@ function ChatroomItem({ chatroom, currentUserId, isSelected, onClick }) {
           </span>
           {time && <span className="chatroom-item-time">{time}</span>}
         </div>
-        <p className="chatroom-item-preview">
-          {lastMessage || <span className="chatroom-item-preview-muted">尚無訊息</span>}
-        </p>
+        <div className="chatroom-item-row chatroom-item-row-bottom">
+          <p className="chatroom-item-preview">
+            {lastMessage || <span className="chatroom-item-preview-muted">尚無訊息</span>}
+          </p>
+          {hasUnread && (
+            <span
+              className="chatroom-item-unread-badge"
+              title={`${unreadCount} 則未讀訊息`}
+              aria-label={`${unreadCount} 則未讀訊息`}
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );

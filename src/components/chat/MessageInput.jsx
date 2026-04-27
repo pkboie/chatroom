@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { sendMessage, editMessage } from '../../services/messageService';
 import { uploadMessageImage } from '../../services/imgbbService';
-import { sanitizeInput } from '../../utils/sanitize';
 import { MESSAGE_TYPES } from '../../utils/constants';
 import GifPicker from './GifPicker';
 import EmojiPicker from './EmojiPicker';
@@ -63,7 +62,7 @@ function MessageInput({
     if (sending || !chatroomId || !currentUser) return;
 
     if (isEditing) {
-      const content = sanitizeInput(value).trim();
+      const content = value.trim();
       if (!content) return;
       setSending(true);
       try {
@@ -100,7 +99,7 @@ function MessageInput({
       return;
     }
 
-    const content = sanitizeInput(value).trim();
+    const content = value.trim();
     if (!content) return;
 
     setSending(true);

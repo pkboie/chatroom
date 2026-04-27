@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChatrooms } from '../hooks/useChatrooms';
 import { useNotification } from '../hooks/useNotification';
+import { markChatroomRead } from '../services/messageService';
 import Sidebar from '../components/sidebar/Sidebar';
 import ChatArea from '../components/chat/ChatArea';
 import CreateRoomModal from '../components/sidebar/CreateRoomModal';
@@ -41,6 +42,21 @@ function ChatPage() {
     () => chatrooms.find((r) => r.id === selectedChatroomId) || null,
     [chatrooms, selectedChatroomId],
   );
+
+  // Auto-clear unread count whenever the user is actively viewing a chatroom
+  // and an unread message arrives (or they just opened it). Skip the write
+  // when count is already 0 to avoid spamming Firestore on every snapshot.
+  const activeUnread = currentUser?.uid
+    ? selectedChatroom?.unreadCounts?.[currentUser.uid] || 0
+    : 0;
+  useEffect(() => {
+    if (!selectedChatroomId || !currentUser?.uid) return;
+    if (activeUnread > 0) {
+      markChatroomRead(selectedChatroomId, currentUser.uid).catch((err) =>
+        console.error('markChatroomRead:', err),
+      );
+    }
+  }, [selectedChatroomId, currentUser?.uid, activeUnread]);
 
   const dismissToast = useCallback((id) => {
     const timer = dismissTimers.current.get(id);

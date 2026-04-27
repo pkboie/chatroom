@@ -181,3 +181,27 @@
     transform: translateY(0) scale(1);
   }
 }
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 16px;
+  }
+  .auth-card {
+    padding: 28px 20px 24px;
+  }
+  .auth-brand {
+    margin-bottom: 22px;
+  }
+  .auth-brand h1 {
+    font-size: 28px;
+  }
+  .auth-field input {
+    font-size: 16px;
+    padding: 11px 12px;
+  }
+  .auth-submit,
+  .auth-google {
+    padding: 11px 14px;
+    font-size: 14.5px;
+  }
+}

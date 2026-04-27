@@ -269,3 +269,35 @@
   background: var(--hover-color);
   transform: scale(1.15);
 }
+
+@media (max-width: 768px) {
+  .message-bubble-wrap {
+    max-width: min(82%, 520px);
+  }
+  .message-bubble {
+    padding: 8px 12px;
+  }
+  .message-bubble-text {
+    font-size: 14px;
+  }
+  .message-bubble-image {
+    max-width: min(280px, 70vw);
+    max-height: min(320px, 60vh);
+  }
+}
+
+@media (max-width: 480px) {
+  .message-bubble-wrap {
+    max-width: 88%;
+  }
+  .message-bubble-react-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 17px;
+  }
+  .message-bubble-menu-trigger {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+  }
+}

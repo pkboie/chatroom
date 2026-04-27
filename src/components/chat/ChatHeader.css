@@ -50,3 +50,39 @@
   background: var(--hover-color);
   color: var(--text-primary);
 }
+
+@media (max-width: 768px) {
+  .chat-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .chat-header-name {
+    font-size: 15px;
+  }
+  .chat-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+  .chat-header-actions {
+    gap: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-header {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .chat-header-name {
+    font-size: 14.5px;
+  }
+  .chat-header-sub {
+    font-size: 11px;
+  }
+  .chat-header-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}

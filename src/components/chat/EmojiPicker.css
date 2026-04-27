@@ -68,3 +68,17 @@
     transform: translateY(0);
   }
 }
+
+@media (max-width: 480px) {
+  .emoji-picker {
+    left: 8px;
+    width: calc(100% - 16px);
+    height: min(55vh, 320px);
+  }
+  .emoji-picker-grid {
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .emoji-picker-cell {
+    font-size: 20px;
+  }
+}

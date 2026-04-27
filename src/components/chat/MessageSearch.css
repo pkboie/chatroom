@@ -125,3 +125,19 @@
     transform: translateY(0);
   }
 }
+
+@media (max-width: 768px) {
+  .message-search {
+    top: 56px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100% - 70px);
+  }
+}
+
+@media (max-width: 480px) {
+  .message-search {
+    top: 52px;
+  }
+}

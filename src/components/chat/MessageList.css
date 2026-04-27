@@ -49,3 +49,15 @@
   color: var(--text-muted);
   letter-spacing: 0.5px;
 }
+
+@media (max-width: 768px) {
+  .message-list {
+    padding: 14px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .message-list {
+    padding: 12px 10px;
+  }
+}

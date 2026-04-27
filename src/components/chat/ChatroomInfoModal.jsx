@@ -4,20 +4,41 @@ import Avatar from '../common/Avatar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUsers } from '../../contexts/UsersContext';
 import { blockUser, unblockUser } from '../../services/userService';
+import { leaveGroup } from '../../services/chatroomService';
 import { sanitizeInput } from '../../utils/sanitize';
 import './ChatroomInfoModal.css';
 
-function ChatroomInfoModal({ isOpen, onClose, chatroom }) {
+function ChatroomInfoModal({ isOpen, onClose, chatroom, onLeft }) {
   const { currentUser, userProfile } = useAuth();
   const { usersById } = useUsers();
   const [busyUid, setBusyUid] = useState(null);
   const [error, setError] = useState(null);
+  const [leaving, setLeaving] = useState(false);
 
   if (!chatroom) return null;
 
   const isGroup = chatroom.type === 'group';
   const blockedSet = new Set(userProfile?.blockedUsers || []);
   const memberUids = chatroom.members || [];
+
+  const handleLeave = async () => {
+    if (!isGroup || !currentUser?.uid || leaving) return;
+    const ok = window.confirm('確定要離開此群組嗎？離開後將無法看到後續訊息，需重新被邀請才能加入。');
+    if (!ok) return;
+    setLeaving(true);
+    setError(null);
+    try {
+      const displayName = userProfile?.username || currentUser.displayName || '使用者';
+      await leaveGroup(chatroom.id, currentUser.uid, displayName);
+      onLeft?.(chatroom.id);
+      onClose?.();
+    } catch (err) {
+      console.error('leaveGroup:', err);
+      setError(err?.message || '離開群組失敗');
+    } finally {
+      setLeaving(false);
+    }
+  };
 
   const handleToggleBlock = async (uid) => {
     if (!currentUser?.uid || uid === currentUser.uid) return;
@@ -101,6 +122,19 @@ function ChatroomInfoModal({ isOpen, onClose, chatroom }) {
           {memberUids.map(renderMemberRow)}
         </ul>
         {error && <p className="info-error">⚠️ {error}</p>}
+
+        {isGroup && memberUids.includes(currentUser?.uid) && (
+          <div className="info-danger-zone">
+            <button
+              type="button"
+              className="info-leave-btn"
+              onClick={handleLeave}
+              disabled={leaving}
+            >
+              {leaving ? '離開中…' : '🚪 離開群組'}
+            </button>
+          </div>
+        )}
       </div>
     </Modal>
   );

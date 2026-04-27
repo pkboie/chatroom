@@ -43,6 +43,15 @@ function ChatPage() {
     [chatrooms, selectedChatroomId],
   );
 
+  // If the selected chatroom disappears from the user's list (left a group,
+  // got kicked, etc.), clear the selection so ChatArea stops trying to
+  // subscribe to messages they no longer have access to.
+  useEffect(() => {
+    if (selectedChatroomId && !selectedChatroom) {
+      setSelectedChatroomId(null);
+    }
+  }, [selectedChatroomId, selectedChatroom]);
+
   // Auto-clear unread count whenever the user is actively viewing a chatroom
   // and an unread message arrives (or they just opened it). Skip the write
   // when count is already 0 to avoid spamming Firestore on every snapshot.

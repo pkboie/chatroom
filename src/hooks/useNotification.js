@@ -88,6 +88,7 @@ export function useNotification({
             const msg = change.doc.data();
             if (msg.senderId === currentUserId) return;
             if (msg.isUnsent) return;
+            if (msg.type === MESSAGE_TYPES.SYSTEM) return;
             if (room.id === activeRef.current && document.hasFocus()) return;
             // User toggled the bell off — suppress both toast & browser notif.
             if (mutedRef.current) return;

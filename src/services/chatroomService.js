@@ -1,5 +1,6 @@
 import {
   addDoc,
+  arrayRemove,
   arrayUnion,
   collection,
   doc,
@@ -10,8 +11,10 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { MESSAGE_TYPES } from '../utils/constants';
 
 const chatroomsCol = () => collection(db, 'chatrooms');
 
@@ -84,4 +87,34 @@ export async function inviteMembers(chatroomId, newMemberIds) {
 
 export async function renameChatroom(chatroomId, name) {
   await updateDoc(doc(db, 'chatrooms', chatroomId), { name });
+}
+
+// Leave a group: drop the user from `members`, drop a system message
+// announcing it, and bump `lastMessage` so all remaining members see the
+// notice in their sidebar. Done as a batch so other clients receive both
+// the membership change and the notice in the same snapshot.
+export async function leaveGroup(chatroomId, userId, displayName) {
+  const roomRef = doc(db, 'chatrooms', chatroomId);
+  const sysRef = doc(collection(db, 'chatrooms', chatroomId, 'messages'));
+  const sysContent = `${displayName || '某位成員'} 已離開群組`;
+
+  const batch = writeBatch(db);
+  batch.set(sysRef, {
+    type: MESSAGE_TYPES.SYSTEM,
+    content: sysContent,
+    senderId: userId,
+    senderName: displayName || '',
+    senderPhoto: '',
+    isEdited: false,
+    isUnsent: false,
+    emojis: {},
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  batch.update(roomRef, {
+    members: arrayRemove(userId),
+    lastMessage: sysContent,
+    lastMessageAt: serverTimestamp(),
+  });
+  await batch.commit();
 }

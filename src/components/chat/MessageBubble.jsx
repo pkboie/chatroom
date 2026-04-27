@@ -139,6 +139,14 @@ function MessageBubble({
       .filter((e) => e.uids.length > 0);
   })();
 
+  if (message.type === MESSAGE_TYPES.SYSTEM) {
+    return (
+      <div className="message-system-row">
+        <span className="message-system-text">{sanitizeInput(message.content || '')}</span>
+      </div>
+    );
+  }
+
   return (
     <div className={`message-row ${isSelf ? 'is-self' : ''}`}>
       {!isSelf && (

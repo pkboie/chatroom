@@ -82,7 +82,7 @@
 .auth-error {
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fecaca;
+  color: var(--error-text);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 13px;

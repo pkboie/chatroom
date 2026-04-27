@@ -28,6 +28,8 @@
   --success: #4ade80;
   --warning: #fbbf24;
   --error: #ef4444;
+  --error-text: #fecaca;
+  --focus-ring: 0 0 0 3px rgba(108, 99, 255, 0.55);
 
   --border-color: rgba(255, 255, 255, 0.08);
   --hover-color: rgba(255, 255, 255, 0.05);
@@ -73,6 +75,10 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 input,
 textarea {
   font-family: inherit;
@@ -86,4 +92,56 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Keyboard focus ring — visible on Tab navigation only.
+   :focus-visible avoids the persistent ring on mouse clicks. */
+:focus {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* Unified scrollbar (WebKit / Chromium). Per-component overrides still win. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Respect reduced-motion preference (a11y).
+   Strip every animation and transition to near-zero so users who set
+   "reduce motion" in their OS don't get vestibular triggers. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

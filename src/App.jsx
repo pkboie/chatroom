@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ChatPage from './pages/ChatPage';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import SplashScreen from './components/common/SplashScreen';
 import './App.css';
 
 function PrivateRoute({ children }) {
@@ -57,6 +58,7 @@ function App() {
       <AuthProvider>
         <UsersProvider>
           <AppRoutes />
+          <SplashScreen />
         </UsersProvider>
       </AuthProvider>
     </BrowserRouter>

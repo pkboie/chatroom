@@ -31,11 +31,29 @@
 .auth-brand h1 {
   font-size: 32px;
   font-weight: 700;
-  background: var(--accent-gradient);
+  background: linear-gradient(
+    90deg,
+    #6c63ff 0%,
+    #8b7cff 25%,
+    #47bfff 50%,
+    #8b7cff 75%,
+    #6c63ff 100%
+  );
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   letter-spacing: -0.5px;
+  animation: brandShimmer 4s linear infinite;
+}
+
+@keyframes brandShimmer {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
 }
 
 .auth-brand p {

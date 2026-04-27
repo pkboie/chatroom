@@ -23,19 +23,50 @@
   padding: 24px;
 }
 
+.chat-area-welcome {
+  animation: welcomeFloat 5s ease-in-out infinite;
+}
+
 .chat-area-welcome h2 {
   font-size: 22px;
   font-weight: 700;
-  background: var(--accent-gradient);
+  background: linear-gradient(
+    90deg,
+    #6c63ff 0%,
+    #8b7cff 25%,
+    #47bfff 50%,
+    #8b7cff 75%,
+    #6c63ff 100%
+  );
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   margin-bottom: 8px;
+  animation: welcomeShimmer 4s linear infinite;
 }
 
 .chat-area-welcome p {
   color: var(--text-secondary);
   font-size: 14px;
+}
+
+@keyframes welcomeFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes welcomeShimmer {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
 }
 
 .chat-area-mobile-menu {

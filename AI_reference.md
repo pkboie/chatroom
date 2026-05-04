@@ -1,14 +1,10 @@
 # AI_reference
-1. AI Tool(s) Used: Claude Code、Antigravity
-2. Scope of Usage: For every segment of code generated or assisted by AI
-- Location: File name and specific line numbers (e.g., App.js, lines 45-82).
-- Prompt & Response: The exact prompt you used and the AI's output
-(Screenshots are highly recommended).
-- Refinement & Explanation: Show your modified version of the code and provide
-a brief explanation of why you made those changes and how the logic works.
+
+##  AI Tools 
+Claude Code、Antigravity
 
 ## implementation plan
-先根據 pdf 操作 Antigravity 完成 implementation_plan.md 檢視計畫內容並微調修改
+先根據 pdf 操作叫 Antigravity 完成 implementation_plan.md 檢視計畫內容並微調修改
 接著請 Antigravity 把這些內容轉化成交給 claude code 執行的 CLAUDE_PLAN.md
 
 ## phase 0 — 專案初始化

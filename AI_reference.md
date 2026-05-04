@@ -2,8 +2,8 @@
 
 ## 1. AI Tool(s) Used
 
-- **Claude Code**（Anthropic Claude Opus 4.7）— 主力編碼 / 重構 / debug
-- **Antigravity**（Google）— 將 PDF 規格轉為 `implementation_plan.md`，再轉為 `CLAUDE_PLAN.md` 供 Claude Code 逐 phase 執行
+- **Claude Code**（Opus 4.7）
+- **Antigravity** — 根據 `2026(Spring)_SS-Midterm Project.pdf` 規格轉為 [`implementation_plan.md`](implementation_plan.md)，再轉為 [`CLAUDE_PLAN.md`](CLAUDE_PLAN.md) 供 Claude Code 逐 phase 執行
 
 ---
 
@@ -15,7 +15,7 @@
 
 ## Phase 0 — 專案初始化
 
-**Prompt**：執行 CLAUDE_PLAN 的 Phase 0，初始化 React + Firebase 專案、寫好工具函式、設定 .env。
+**Prompt**：執行 CLAUDE_PLAN.md 的 Phase 0，依 `事先準備.txt` 填入環境變數。
 
 **做了什麼**：用 `npm create vite@latest` 建 React 19 + Vite 8 骨架，加入 Firebase / React Router / DOMPurify 三個依賴，建立深色主題與工具函式。
 
@@ -24,7 +24,7 @@
 - `src/config/firebase.js` — Firebase 初始化、export `auth` / `db` / `googleProvider`
 - `src/index.css` — 深色主題 CSS Variables、reset
 - `src/utils/{constants,formatTime,sanitize}.js` — 共用工具
-- `.env` / `.env.example` — 12 個 `VITE_*` 變數
+- `.env` — 12 個 `VITE_*` 變數
 
 **關鍵程式碼** — `src/config/firebase.js`：
 
@@ -45,13 +45,12 @@ export const db = getFirestore(app);
 
 **簡要說明 / 微調**：
 - 偏離原計畫：Firebase Storage 需 Blaze 付費方案 → 改用 ImgBB 免費 API（`uploadProfileImage` / `uploadMessageImage`），介面不變。
-- VAPID key 留空：Phase 5 改用瀏覽器原生 Notification API，不需要 FCM。
 
 ---
 
 ## Phase 1 — 會員系統（Email + Google）
 
-**Prompt**：實作 Email/Google 登入註冊、AuthContext、路由保護。
+**Prompt**：進 Phase 1，實作 Email/Google 登入註冊。
 
 **做了什麼**：寫了 `AuthContext` 用 `onAuthStateChanged` 同步 currentUser，並訂閱 `users/{uid}` 文件即時取得 profile；建立兩個路由守門元件。
 
@@ -85,7 +84,7 @@ function PublicOnlyRoute({ children }) {
 
 ## Phase 2 — 聊天室核心（即時訊息）
 
-**Prompt**：實作私聊 / 群聊建立、Sidebar、ChatArea、即時訊息收發。
+**Prompt**：進 Phase 2 實作私聊 / 群聊建立、Sidebar、ChatArea、即時訊息收發。
 
 **做了什麼**：用 Firestore `onSnapshot` 訂閱聊天室與訊息子集合；訊息發送時把 `senderName` / `senderPhoto` 一起 denormalize 寫入。
 
@@ -120,7 +119,7 @@ useEffect(() => {
 
 ## Phase 3 — 個人資料 + ImgBB 頭像上傳
 
-**Prompt**：建立 ProfileModal、頭像上傳、登出搬進 Modal。
+**Prompt**：進 Phase 3，建立 ImgBB 上傳與個人資料編輯 Modal。
 
 **做了什麼**：用 `URL.createObjectURL` 做頭像 preview，儲存時才上傳 ImgBB；同步寫 Firebase Auth `displayName` / `photoURL`。
 
@@ -151,7 +150,7 @@ const handleSave = async () => {
 
 ## Phase 4 — 訊息操作（編輯 / 收回 / 搜尋 / 圖片）
 
-**Prompt**：實作訊息收回、編輯、搜尋、傳送圖片。
+**Prompt**：進 Phase 4，實作訊息收回、編輯、搜尋、傳送圖片。
 
 **做了什麼**：MessageBubble hover 顯示 ⋯ 選單，編輯走 `editMessage` 服務、收回前 `window.confirm`；MessageSearch 浮動 panel + scrollIntoView 跳轉高亮。
 
@@ -181,7 +180,7 @@ const handleUnsend = () => {
 
 ## Phase 5 — 通知 + CSS 動畫整理 + XSS 防禦
 
-**Prompt**：實作 Chrome Notification、整理 CSS Animation、補強 XSS 防護。
+**Prompt**：進 Phase 5，實作 Chrome Notification、整理 CSS Animation
 
 **做了什麼**：用瀏覽器原生 Notification API + Firestore onSnapshot 達成「不在當前聊天室或失焦時收通知」；DOMPurify 處理使用者可控字串。
 
@@ -212,14 +211,14 @@ snap.docChanges().forEach((change) => {
 ```
 
 **簡要說明 / 微調**：
-- **不用 FCM 全套**：Phase 0 就決定省掉 VAPID key。原生 Notification API 已足夠「使用者開著瀏覽器但切到別的視窗」場景。
+- **不用 FCM**：在 Phase 0 就決定省掉 VAPID key。原生 Notification API 已足夠「使用者開著瀏覽器但切到別的視窗」場景。
 - **bug fix（同 Phase）— 系統通知靜默失敗**：原本通知請求寫在 `useEffect` 載入時就呼叫 → Chrome 政策要求必須由「使用者明確互動」觸發。新增 `NotificationButton` 點擊才呼叫；同時加 toast fallback，permission 沒給也仍能在 app 內看到。
 
 ---
 
 ## Phase 6 — 進階功能（AI Chatbot / Block / GIF / Reactions）
 
-**Prompt**：依序做 (6.1) Gemini AI 助手、(6.2) 封鎖使用者、(6.3) GIPHY GIF Picker、(6.4) Emoji Reactions。
+**Prompt**：進行 Phase 6，依序做 (6.1) Gemini AI 助手、(6.2) 封鎖使用者、(6.3) GIPHY GIF、(6.4) Emoji 
 
 ### 6.1 — Gemini AI Chatbot
 
@@ -309,7 +308,7 @@ export async function addReaction(chatroomId, messageId, emoji, userId) {
 
 ## Phase 7 — RWD 響應式設計
 
-**Prompt**：所有元件在 ≤768px / ≤480px 螢幕都能用，不能溢出或被擠扁。
+**Prompt**：進 Phase 7，把所有元件在 ≤768px / ≤480px 螢幕都能用，所有按鈕 / picker / modal / bubble 不能溢出或被擠扁。
 
 **做了什麼**：純 CSS @media 改寫，行為（hamburger toggle、resize listener）Phase 0 已預埋。
 
@@ -334,9 +333,9 @@ export async function addReaction(chatroomId, messageId, emoji, userId) {
 
 ---
 
-## Phase 8 — 全域 a11y polish
+## Phase 8 — UI a11y polish
 
-**Prompt**：CSS variable 統一、focus-visible、prefers-reduced-motion、scrollbar 統一。
+**Prompt**：進 Phase 8，按 CLAUDE_PLAN 的 checklist 把全域 polish 一輪：CSS variable、hover/focus、Loading、Modal、空狀態、cursor、form focus。
 
 **修改的檔案**：
 - `src/index.css` — 全域規則
@@ -370,7 +369,9 @@ button:disabled {
 
 ## Phase 8.5 — 文字顯示 bug 修復 + 未讀計數
 
-**Prompt**：(1) 我輸入什麼就顯示什麼（包含 `<script>` `<h1>` `<` 都原文照出）。(2) 新增未讀標記與未讀數 badge。
+**Prompt**：
+1. 「請幫我改成我輸入甚麼內容 輸出就會是甚麼內容」— 想要 `<script>alert("example");</script>`、`<h1>example</h1>`、`<` 都「原文照顯示」，目前送出後 `<` 會變成 `&lt;`。
+2. 「想要新增還尚未讀訊息的聊天室 可以用特殊的符號或其他方式標記 並且可以顯示未讀幾則訊息」。
 
 **做了什麼**：把 `sanitizeInput` 改 identity（React 文字渲染本身就 XSS 安全）；`sendMessage` 加 fanout 寫入每位 member 的 `unreadCounts`，進房間自動 markRead。
 
@@ -453,7 +454,7 @@ export function useNotificationMuted() {
 
 ## Phase 8.7 — 離開群組 + 系統訊息
 
-**Prompt**：新增離開群組功能，左側群組自動消失，其他成員看到「XXX 已離開群組」系統訊息。
+**Prompt**：請幫我新增離開群組的功能。離開後左側群組聊天室會自動消失 但是其他不影響其他還在群組的人 只會有某人離開群組的訊息跳出
 
 **做了什麼**：用 `writeBatch` 原子寫入「移除成員 + 系統訊息 + 更新 lastMessage」三件事。
 
@@ -501,7 +502,12 @@ export async function leaveGroup(chatroomId, userId, displayName) {
 
 ## Phase 8.8 + 8.9 — Splash 開場 3D 動畫（CodePen 風格碎片重組）
 
-**Prompt**：(8.8) 加 logo 載入動畫 + 其他適合的 CSS 動畫。(8.9) 改編 [CodePen 3D shatter](https://codepen.io/zadvorsky/pen/PNXbGo) 變成 chatroom 版 → 「動畫有點卡卡的，請弄到順暢」。
+**Prompt**：
+Use CSS animation (2%) – Button hover is not an animation! 幫我在點開啟此 chatroom 一開始 幫我加入 logo 的動畫載入動畫 並且在其他適合的地方幫我加入好看的動畫特效 2D 3D 皆可
+
+你可以幫我參考這個網站做的 css animation 幫我在開啟 app 的片頭改編成 幫我製作出屬於 chatroom 這個版本的 3D animation 用 2s」→ 後續：「動畫有點卡卡的 請幫我弄到順暢的動畫 時間不一定要 2s 依照你認為最適合的秒數 但是動畫要視順暢的」。
+
+(8.8) 加 logo 載入動畫 + 其他適合的 CSS 動畫。(8.9) 改編 [CodePen 3D shatter](https://codepen.io/zadvorsky/pen/PNXbGo) 變成 chatroom 版 → 「動畫有點卡卡的，請弄到順暢」。
 
 **做了什麼**：用純 CSS（不引 Three.js）模擬 64 → 36 個 shard 從 3D 空間飛回拼成 logo；後續為了順暢度大幅優化。
 
@@ -567,7 +573,7 @@ function buildShards() {
 
 ## Phase 9 — Firebase Hosting 部署
 
-**Prompt**：最後一個階段，請幫我 firebase deploy。
+**Prompt**：最後一個階段，firebase deploy。
 
 **做了什麼**：建立 `firebase.json` + `.firebaserc`，用 `firebase deploy --only hosting` 部署到 https://chatroom-72dab.web.app。
 
@@ -603,7 +609,7 @@ function buildShards() {
 
 ---
 
-## 3. 開發歷程備註
+## 3. 備註
 
 - 所有 phase 都是「單一 prompt 啟動 → AI 產生大量檔案 → 我 review + 微調 → npm run build 驗證 → commit」的循環。
 - 較複雜的 phase（5、6、8.x）AI 第一次產出後會跑出 bug，會再下幾輪「prompt 描述問題 → AI 提修復 → 我 review」迭代。詳細 bug 與修法見每個 phase 的「簡要說明 / 微調」區塊。

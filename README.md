@@ -4,7 +4,7 @@
 
 **🌐 線上**：https://chatroom-72dab.web.app 和 https://chatroom-72dab.firebaseapp.com
 
-**GitHub**：https://github.com/pkb0403/chatroom
+**GitHub**：https://github.com/pkboie/chatroom
 
 ---
 

@@ -2,7 +2,9 @@
 
 > 軟體設計與實驗 期中專案 · React + Firebase 即時聊天室
 
-**🌐 線上版本**：https://chatroom-72dab.web.app 和 https://chatroom-72dab.firebaseapp.com
+**🌐 線上**：https://chatroom-72dab.web.app 和 https://chatroom-72dab.firebaseapp.com
+
+**GitHub**：https://github.com/pkb0403/chatroom
 
 ---
 

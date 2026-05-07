@@ -155,11 +155,16 @@
 
 ## 本地端 Setup
 
-### Step 1：安裝套件
+> 📦 **繳交檔案說明**：
+> 依評分規範，`node_modules/` 與 `dist/` **沒有**附在繳交 zip 內（避免檔案過大、且 -5 分扣分項）。`npm install` 會自動依 `package.json` / `package-lock.json` 重新下載所有相依套件並建立 `node_modules/`，無須手動處理。
+>
+> 環境需求：Node.js ≥ 18（建議 20 LTS），確認版本：`node -v`。
+
+### Step 1：解壓縮 + 安裝套件
 
 ```bash
-cd chatroom
-npm install
+cd chatroom        # 進入解壓縮後的專案資料夾
+npm install        # 依 package.json 自動建立 node_modules（首次約 1-2 分鐘）
 ```
 
 ### Step 2：放入 `.env` 並啟動
